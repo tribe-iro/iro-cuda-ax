@@ -1,0 +1,215 @@
+{
+  "schema_version": 2,
+  "arch": "sm90",
+  "kernels": [
+    {
+      "id": "attention_64x64",
+      "op_family": "attention",
+      "capability": "sm90",
+      "profile": "proof_full",
+      "graph_hash": "0x5049caf5e71d715b",
+      "config": {
+        "tile": [64, 64, 64],
+        "head_dim": 16,
+        "causal": true
+      },
+      "realization_key": "preset.attention.64x64",
+      "pattern": "axp::preset::Attention64x64",
+      "entry": "Attention64x64"
+    },
+    {
+      "id": "fa2_decode_attention_64x64_hd128",
+      "op_family": "attention",
+      "capability": "sm90",
+      "profile": "proof_full",
+      "graph_hash": "0xc95bfaa16a0a3918",
+      "config": {
+        "tile": [64, 64, 64],
+        "head_dim": 128,
+        "causal": true
+      },
+      "realization_key": "preset.attention.64x64.hd128.decode",
+      "pattern": "axp::preset::Attention64x64x128Decode",
+      "entry": "Attention64x64x128Decode"
+    },
+    {
+      "id": "fa2_prefill_attention_64x64_hd128",
+      "op_family": "attention",
+      "capability": "sm90",
+      "profile": "proof_full",
+      "graph_hash": "0x39ab933815bef6a8",
+      "config": {
+        "tile": [64, 64, 64],
+        "head_dim": 128,
+        "causal": true
+      },
+      "realization_key": "preset.attention.64x64.hd128.prefill",
+      "pattern": "axp::preset::Attention64x64x128Prefill",
+      "entry": "Attention64x64x128Prefill"
+    },
+    {
+      "id": "gemm_64x64x16",
+      "op_family": "gemm",
+      "capability": "sm90",
+      "profile": "proof_full",
+      "graph_hash": "0x6a772f708674ef56",
+      "config": {
+        "dtype": "bf16",
+        "shape": [64, 64, 16],
+        "stages": 2
+      },
+      "realization_key": "preset.gemm.64x64x16",
+      "pattern": "axp::preset::Gemm64x64x16",
+      "entry": "Gemm64x64x16"
+    },
+    {
+      "id": "gemm_64x64x16_bias_silu",
+      "op_family": "gemm_fused",
+      "capability": "sm90",
+      "profile": "proof_full",
+      "graph_hash": "0x33608d15b66a61ef",
+      "config": {
+        "dtype": "bf16",
+        "shape": [64, 64, 16],
+        "epilogue": "bias_silu",
+        "stages": 2
+      },
+      "realization_key": "preset.gemm.64x64x16.bias_silu",
+      "pattern": "axp::preset::Gemm64x64x16BiasSiLU",
+      "entry": "Gemm64x64x16BiasSiLU"
+    },
+    {
+      "id": "histogram_256",
+      "op_family": "histogram",
+      "capability": "sm90",
+      "profile": "proof_full",
+      "graph_hash": "0xc30ae660583a0c50",
+      "config": {
+        "bins": 256,
+        "value_type": "f32",
+        "index_type": "u32"
+      },
+      "realization_key": "preset.histogram.256",
+      "pattern": "axp::preset::Histogram256",
+      "entry": "Histogram256"
+    },
+    {
+      "id": "histogram_256_dev_fast",
+      "op_family": "histogram",
+      "capability": "sm90",
+      "profile": "dev_fast",
+      "graph_hash": "0xc30ae660583a0c50",
+      "config": {
+        "bins": 256,
+        "value_type": "f32",
+        "index_type": "u32"
+      },
+      "realization_key": "preset.histogram.256",
+      "pattern": "axp::preset::Histogram256",
+      "entry": "Histogram256"
+    },
+    {
+      "id": "layernorm_16x16",
+      "op_family": "layernorm",
+      "capability": "sm90",
+      "profile": "proof_full",
+      "graph_hash": "0x24cfea1387e2539a",
+      "config": {
+        "tile": [16, 16],
+        "dtype": "bf16"
+      },
+      "realization_key": "preset.layernorm.16x16",
+      "pattern": "axp::preset::LayerNorm16x16",
+      "entry": "LayerNorm16x16"
+    },
+    {
+      "id": "rmsnorm_16x16",
+      "op_family": "rmsnorm",
+      "capability": "sm90",
+      "profile": "proof_full",
+      "graph_hash": "0x88980e507c926e83",
+      "config": {
+        "tile": [16, 16],
+        "dtype": "bf16"
+      },
+      "realization_key": "preset.rmsnorm.16x16",
+      "pattern": "axp::preset::RMSNorm16x16",
+      "entry": "RMSNorm16x16"
+    },
+    {
+      "id": "softmax_row4",
+      "op_family": "softmax",
+      "capability": "sm90",
+      "profile": "proof_full",
+      "graph_hash": "0xb704344dd328af0f",
+      "config": {
+        "elements_per_thread": 4,
+        "accumulate": "fp32",
+        "io": "bf16"
+      },
+      "realization_key": "preset.softmax.row4",
+      "pattern": "axp::preset::SoftmaxRow4",
+      "entry": "SoftmaxRow4"
+    },
+    {
+      "id": "sort_16",
+      "op_family": "sort",
+      "capability": "sm90",
+      "profile": "proof_full",
+      "graph_hash": "0xa269e839e1669050",
+      "config": {
+        "tile_elems": 16,
+        "dtype": "f32"
+      },
+      "realization_key": "preset.sort.16",
+      "pattern": "axp::preset::Sort16",
+      "entry": "Sort16"
+    },
+    {
+      "id": "sort_16_dev_fast",
+      "op_family": "sort",
+      "capability": "sm90",
+      "profile": "dev_fast",
+      "graph_hash": "0xa269e839e1669050",
+      "config": {
+        "tile_elems": 16,
+        "dtype": "f32"
+      },
+      "realization_key": "preset.sort.16",
+      "pattern": "axp::preset::Sort16",
+      "entry": "Sort16"
+    },
+    {
+      "id": "vectorized_elementwise_16x16",
+      "op_family": "elementwise",
+      "capability": "sm90",
+      "profile": "proof_full",
+      "graph_hash": "0x6b67a38f9488bc84",
+      "config": {
+        "tile": [16, 16],
+        "dtype": "f32",
+        "layout": "row_major",
+        "mode": "contiguous"
+      },
+      "realization_key": "preset.elementwise.vec.16x16",
+      "pattern": "axp::preset::VectorizedElementwise16x16",
+      "entry": "VectorizedElementwise16x16"
+    },
+    {
+      "id": "vectorized_elementwise_16x16_dev_fast",
+      "op_family": "elementwise",
+      "capability": "sm90",
+      "profile": "dev_fast",
+      "graph_hash": "0x6b67a38f9488bc84",
+      "config": {
+        "tile": [16, 16],
+        "dtype": "f32",
+        "layout": "row_major",
+        "mode": "contiguous"
+      },
+      "realization_key": "preset.elementwise.vec.16x16",
+      "pattern": "axp::preset::VectorizedElementwise16x16",
+      "entry": "VectorizedElementwise16x16"
+    }
+  ]
+}
