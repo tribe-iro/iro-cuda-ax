@@ -4,12 +4,13 @@
     {
       "graph_id": "attention_16x16",
       "graph_hash": "0x15583dd84da2d8e9",
-      "pattern": "axp::preset::Attention16x16",
+      "pattern": "axp::l4::preset::Attention16x16",
       "entry": "Attention16x16",
       "op_family": "attention",
       "realization_key": "preset.attention.16x16",
       "capabilities": [
-        "sm89"
+        "sm89",
+        "sm90"
       ],
       "profiles": [
         "dev_fast",
@@ -23,13 +24,17 @@
         {
           "capability": "sm89",
           "profile": "proof_full"
+        },
+        {
+          "capability": "sm90",
+          "profile": "proof_full"
         }
       ]
     },
     {
       "graph_id": "layernorm_16x16",
       "graph_hash": "0x24cfea1387e2539a",
-      "pattern": "axp::preset::LayerNorm16x16",
+      "pattern": "axp::l4::preset::LayerNorm16x16",
       "entry": "LayerNorm16x16",
       "op_family": "layernorm",
       "realization_key": "preset.layernorm.16x16",
@@ -54,7 +59,7 @@
     {
       "graph_id": "gemm_64x64x16_bias_silu",
       "graph_hash": "0x33608d15b66a61ef",
-      "pattern": "axp::preset::Gemm64x64x16BiasSiLU",
+      "pattern": "axp::l4::preset::Gemm64x64x16BiasSiLU",
       "entry": "Gemm64x64x16BiasSiLU",
       "op_family": "gemm_fused",
       "realization_key": "preset.gemm.64x64x16.bias_silu",
@@ -74,7 +79,7 @@
     {
       "graph_id": "fa2_prefill_attention_64x64_hd128",
       "graph_hash": "0x39ab933815bef6a8",
-      "pattern": "axp::preset::Attention64x64x128Prefill",
+      "pattern": "axp::l4::preset::Attention64x64x128Prefill",
       "entry": "Attention64x64x128Prefill",
       "op_family": "attention",
       "realization_key": "preset.attention.64x64.hd128.prefill",
@@ -94,7 +99,7 @@
     {
       "graph_id": "attention_64x64",
       "graph_hash": "0x5049caf5e71d715b",
-      "pattern": "axp::preset::Attention64x64",
+      "pattern": "axp::l4::preset::Attention64x64",
       "entry": "Attention64x64",
       "op_family": "attention",
       "realization_key": "preset.attention.64x64",
@@ -114,7 +119,7 @@
     {
       "graph_id": "gemm_64x64x16",
       "graph_hash": "0x6a772f708674ef56",
-      "pattern": "axp::preset::Gemm64x64x16",
+      "pattern": "axp::l4::preset::Gemm64x64x16",
       "entry": "Gemm64x64x16",
       "op_family": "gemm",
       "realization_key": "preset.gemm.64x64x16",
@@ -134,7 +139,7 @@
     {
       "graph_id": "vectorized_elementwise_16x16",
       "graph_hash": "0x6b67a38f9488bc84",
-      "pattern": "axp::preset::VectorizedElementwise16x16",
+      "pattern": "axp::l4::preset::VectorizedElementwise16x16",
       "entry": "VectorizedElementwise16x16",
       "op_family": "elementwise",
       "realization_key": "preset.elementwise.vec.16x16",
@@ -168,7 +173,7 @@
     {
       "graph_id": "rmsnorm_16x16",
       "graph_hash": "0x88980e507c926e83",
-      "pattern": "axp::preset::RMSNorm16x16",
+      "pattern": "axp::l4::preset::RMSNorm16x16",
       "entry": "RMSNorm16x16",
       "op_family": "rmsnorm",
       "realization_key": "preset.rmsnorm.16x16",
@@ -193,7 +198,7 @@
     {
       "graph_id": "sort_16",
       "graph_hash": "0xa269e839e1669050",
-      "pattern": "axp::preset::Sort16",
+      "pattern": "axp::l4::preset::Sort16",
       "entry": "Sort16",
       "op_family": "sort",
       "realization_key": "preset.sort.16",
@@ -227,7 +232,7 @@
     {
       "graph_id": "softmax_row4",
       "graph_hash": "0xb704344dd328af0f",
-      "pattern": "axp::preset::SoftmaxRow4",
+      "pattern": "axp::l4::preset::SoftmaxRow4",
       "entry": "SoftmaxRow4",
       "op_family": "softmax",
       "realization_key": "preset.softmax.row4",
@@ -252,7 +257,7 @@
     {
       "graph_id": "histogram_256",
       "graph_hash": "0xc30ae660583a0c50",
-      "pattern": "axp::preset::Histogram256",
+      "pattern": "axp::l4::preset::Histogram256",
       "entry": "Histogram256",
       "op_family": "histogram",
       "realization_key": "preset.histogram.256",
@@ -286,12 +291,13 @@
     {
       "graph_id": "gemm_16x16x16",
       "graph_hash": "0xc3f2b8930d5ffd1c",
-      "pattern": "axp::preset::Gemm16x16x16",
+      "pattern": "axp::l4::preset::Gemm16x16x16",
       "entry": "Gemm16x16x16",
       "op_family": "gemm",
       "realization_key": "preset.gemm.16x16x16",
       "capabilities": [
-        "sm89"
+        "sm89",
+        "sm90"
       ],
       "profiles": [
         "dev_fast",
@@ -305,13 +311,21 @@
         {
           "capability": "sm89",
           "profile": "proof_full"
+        },
+        {
+          "capability": "sm90",
+          "profile": "dev_fast"
+        },
+        {
+          "capability": "sm90",
+          "profile": "proof_full"
         }
       ]
     },
     {
       "graph_id": "fa2_decode_attention_64x64_hd128",
       "graph_hash": "0xc95bfaa16a0a3918",
-      "pattern": "axp::preset::Attention64x64x128Decode",
+      "pattern": "axp::l4::preset::Attention64x64x128Decode",
       "entry": "Attention64x64x128Decode",
       "op_family": "attention",
       "realization_key": "preset.attention.64x64.hd128.decode",

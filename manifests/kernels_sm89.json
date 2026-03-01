@@ -14,7 +14,7 @@
         "causal": true
       },
       "realization_key": "preset.attention.16x16",
-      "pattern": "axp::preset::Attention16x16",
+      "pattern": "axp::l4::preset::Attention16x16",
       "entry": "Attention16x16"
     },
     {
@@ -29,7 +29,7 @@
         "causal": true
       },
       "realization_key": "preset.attention.16x16",
-      "pattern": "axp::preset::Attention16x16",
+      "pattern": "axp::l4::preset::Attention16x16",
       "entry": "Attention16x16"
     },
     {
@@ -44,7 +44,7 @@
         "stages": 2
       },
       "realization_key": "preset.gemm.16x16x16",
-      "pattern": "axp::preset::Gemm16x16x16",
+      "pattern": "axp::l4::preset::Gemm16x16x16",
       "entry": "Gemm16x16x16"
     },
     {
@@ -59,7 +59,7 @@
         "stages": 2
       },
       "realization_key": "preset.gemm.16x16x16",
-      "pattern": "axp::preset::Gemm16x16x16",
+      "pattern": "axp::l4::preset::Gemm16x16x16",
       "entry": "Gemm16x16x16"
     },
     {
@@ -74,7 +74,7 @@
         "index_type": "u32"
       },
       "realization_key": "preset.histogram.256",
-      "pattern": "axp::preset::Histogram256",
+      "pattern": "axp::l4::preset::Histogram256",
       "entry": "Histogram256"
     },
     {
@@ -89,7 +89,7 @@
         "index_type": "u32"
       },
       "realization_key": "preset.histogram.256",
-      "pattern": "axp::preset::Histogram256",
+      "pattern": "axp::l4::preset::Histogram256",
       "entry": "Histogram256"
     },
     {
@@ -103,7 +103,7 @@
         "dtype": "bf16"
       },
       "realization_key": "preset.layernorm.16x16",
-      "pattern": "axp::preset::LayerNorm16x16",
+      "pattern": "axp::l4::preset::LayerNorm16x16",
       "entry": "LayerNorm16x16"
     },
     {
@@ -117,7 +117,7 @@
         "dtype": "bf16"
       },
       "realization_key": "preset.rmsnorm.16x16",
-      "pattern": "axp::preset::RMSNorm16x16",
+      "pattern": "axp::l4::preset::RMSNorm16x16",
       "entry": "RMSNorm16x16"
     },
     {
@@ -132,7 +132,7 @@
         "io": "bf16"
       },
       "realization_key": "preset.softmax.row4",
-      "pattern": "axp::preset::SoftmaxRow4",
+      "pattern": "axp::l4::preset::SoftmaxRow4",
       "entry": "SoftmaxRow4"
     },
     {
@@ -146,7 +146,7 @@
         "dtype": "f32"
       },
       "realization_key": "preset.sort.16",
-      "pattern": "axp::preset::Sort16",
+      "pattern": "axp::l4::preset::Sort16",
       "entry": "Sort16"
     },
     {
@@ -160,7 +160,7 @@
         "dtype": "f32"
       },
       "realization_key": "preset.sort.16",
-      "pattern": "axp::preset::Sort16",
+      "pattern": "axp::l4::preset::Sort16",
       "entry": "Sort16"
     },
     {
@@ -176,7 +176,7 @@
         "mode": "contiguous"
       },
       "realization_key": "preset.elementwise.vec.16x16",
-      "pattern": "axp::preset::VectorizedElementwise16x16",
+      "pattern": "axp::l4::preset::VectorizedElementwise16x16",
       "entry": "VectorizedElementwise16x16"
     },
     {
@@ -192,7 +192,7 @@
         "mode": "contiguous"
       },
       "realization_key": "preset.elementwise.vec.16x16",
-      "pattern": "axp::preset::VectorizedElementwise16x16",
+      "pattern": "axp::l4::preset::VectorizedElementwise16x16",
       "entry": "VectorizedElementwise16x16"
     }
   ]

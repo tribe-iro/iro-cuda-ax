@@ -30,14 +30,11 @@ In AX terms, this maps to:
 
 ## SM89 completion status
 
-- Launch-time dynamic shared memory policy is implemented via
-  `irffi::prepare_kernel_launch_attrs(...)` in the FFI C++ header and applied
-  by exported raw-kernel wrappers.
 - Manifest and graph-registry coverage now include SM89-native GEMM/attention
   entries (`gemm_16x16x16`, `attention_16x16`) in addition to norm/sort/histogram/softmax.
-- CI includes a compile-performance gate for SM89:
-  `scripts/perf/check_compile_gate.sh` is wired into `scripts/ci/ax_full_main.sh`
-  and `scripts/ci/nightly_perf.sh`.
+- Pre-GA verification is intentionally minimal:
+  `scripts/check.sh` for manifest/registry integrity and
+  `AX_COMPILE_MODE=dev_fast|proof_full scripts/compile.sh` for deterministic TU generation.
 
 ## References
 

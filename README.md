@@ -13,6 +13,8 @@ This repository contains only C++ AX artifacts:
 
 No Rust crates or Cargo packaging exist in this repository.
 
+Canonical public presets are `axp::l4::preset::*`.
+
 ## Build
 
 ```bash
@@ -25,3 +27,9 @@ cmake --install build --prefix ./out
 
 Consume as header-only C++ package via CMake target `iro-cuda-ax::headers`
 or by adding `include/` to your compiler include paths.
+
+## Manifest And Registry Checks
+
+```bash
+scripts/check.sh
+```

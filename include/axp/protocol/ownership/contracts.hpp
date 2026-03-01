@@ -5,7 +5,6 @@
 #include "../../detail/resources.hpp"
 #include "../../detail/participation_tokens.hpp"
 #include "dist_tags.hpp"
-#include "bundles.hpp"
 #include "../../bundles/token_bundles.hpp"
 #include "../stage/resources.hpp"
 

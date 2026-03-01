@@ -1,5 +1,5 @@
 #pragma once
-// Generated file. If regenerating upstream, run tools/wgmma_sanitize.py to
+// Generated file. If regenerating upstream, run tools/axprimitives/wgmma_sanitize.py to
 // normalize declarations and keep nvcc-compatible syntax.
 
 namespace axp::realize::sm90::detail {

@@ -6,7 +6,7 @@
 #include <iro_rust_cuda_ffi.h>
 #include "iro_cuda_ax_core.hpp"
 #include <axp/primitives.hpp>
-#include "ax_asserts_defs.hpp"
+#include "../compile/ax_asserts_defs.hpp"
 
 namespace axp_compile_test {
 
@@ -14,6 +14,17 @@ template<class T>
 struct ForceInstantiate {
     static constexpr int value = sizeof(T);
 };
+
+using L3GemmConfigSm90Small = axp::level3::GemmTileConfig<
+    RecipeF16,
+    16, 16, 16,
+    2, 2,
+    ASubj, BSubj, CSubj,
+    WgmmaSubj
+>;
+using L3GemmSm90Small = axp::level3::GemmTile<L3GemmConfigSm90Small, iro::cap::sm90>;
+static_assert(iro::util::size_v<typename L3GemmSm90Small::inputs> >= 2);
+template struct ForceInstantiate<L3GemmSm90Small>;
 
 using L3GemmConfigSm90 = axp::level3::GemmTileConfig<
     RecipeF16,
@@ -75,6 +86,17 @@ using L3GemmMulticastConfig = axp::level3::GemmTileConfigSm90Multicast<
 using L3GemmMulticast = axp::level3::GemmTile<L3GemmMulticastConfig, iro::cap::sm90>;
 static_assert(iro::util::size_v<typename L3GemmMulticast::inputs> >= 2);
 template struct ForceInstantiate<L3GemmMulticast>;
+
+using L3AttentionConfigSm90Small = axp::level3::AttentionTileConfig<
+    RecipeF16,
+    16, 16, 16, 16,
+    2, 0,
+    QSubj, KSubj, VSubj,
+    AttnAccSubj, AttnStateOldSubj, AttnStateNewSubj
+>;
+using L3AttentionSm90Small = axp::level3::AttentionTile<L3AttentionConfigSm90Small, iro::cap::sm90>;
+static_assert(iro::util::size_v<typename L3AttentionSm90Small::inputs> >= 3);
+template struct ForceInstantiate<L3AttentionSm90Small>;
 
 using L3AttentionConfigSm90 = axp::level3::AttentionTileConfig<
     RecipeF16,

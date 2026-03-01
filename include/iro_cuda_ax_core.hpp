@@ -36,7 +36,7 @@
  * - AX never infers/inserts waits, barriers, fences, conversions, adapters,
  *   lifetimes, ownership, aliasing, reuse, or capability fallbacks
  *
- * @see new_ax.md for full specification (v0.2.4)
+ * @see VISION.md for full specification (v0.2.4)
  */
 
 #include <cstdint>

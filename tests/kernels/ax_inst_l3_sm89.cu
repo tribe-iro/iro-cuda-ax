@@ -6,7 +6,7 @@
 #include <iro_rust_cuda_ffi.h>
 #include "iro_cuda_ax_core.hpp"
 #include <axp/primitives.hpp>
-#include "ax_asserts_defs.hpp"
+#include "../compile/ax_asserts_defs.hpp"
 
 namespace axp_compile_test {
 

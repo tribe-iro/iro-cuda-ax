@@ -53,7 +53,7 @@ def render_tu(
         "#include <type_traits>\n"
         "#include <iro_rust_cuda_ffi.h>\n"
         "#include \"iro_cuda_ax_core.hpp\"\n"
-        "#include <axp/l3_presets.hpp>\n"
+        "#include <axp/l4.hpp>\n"
         "#include <axp/l4/resolve.hpp>\n\n"
         "namespace axp_generated_inst {\n\n"
         f"inline constexpr iro::util::u64 kGraphHash = {graph_hash}ULL;\n"

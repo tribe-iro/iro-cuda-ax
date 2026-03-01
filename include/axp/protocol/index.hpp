@@ -10,7 +10,6 @@
 #include "compute/bundles.hpp"
 #include "view/contracts.hpp"
 #include "view/tileviews.hpp"
-#include "ownership/bundles.hpp"
 #include "ownership/contracts.hpp"
 #include "tma/contracts.hpp"
 #include "scale/contracts.hpp"

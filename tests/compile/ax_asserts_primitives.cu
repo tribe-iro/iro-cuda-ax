@@ -705,7 +705,7 @@ static_assert(!iro::bind::match_realization<EmptyObligation, iro::cap::sm90, Tes
 static_assert(iro::bind::match_realization<EmptyObligation, iro::cap::sm90, TestRegistry>::match_count == 1);
 
 // L4 graph-hash dispatch must resolve deterministically without preset-only fallback.
-using SortGraph = axp::level3::registry::Select<axp::preset::Sort16, iro::cap::sm89>;
+using SortGraph = axp::level3::registry::Select<axp::l4::preset::Sort16, iro::cap::sm89>;
 using L4SortResolve = axp::l4::resolve<SortGraph, iro::cap::sm89, axp::l4::profile::proof_full>;
 static_assert(axp::l4::graph_registry::enabled_v<
               axp::graph::graph_hash_v<SortGraph>, iro::cap::sm89, axp::l4::profile::proof_full>);

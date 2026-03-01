@@ -26,7 +26,6 @@
 #include "../protocol/sync/contracts.hpp"
 #include "../protocol/view/contracts.hpp"
 #include "../protocol/ownership/contracts.hpp"
-#include "../protocol/ownership/bundles.hpp"
 #include "../protocol/convert/contracts.hpp"
 #include "../detail/conversion.hpp"
 #include "../level0/memory_cache.hpp"

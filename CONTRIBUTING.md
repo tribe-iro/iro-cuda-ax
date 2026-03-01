@@ -1,37 +1,40 @@
 # Contributing
 
-Thanks for your interest in iro-cuda.
+## Scope
 
-## Quick Start
+`iro-cuda-ax` is a C++20 compile-time architecture/composition library.
+This repository does not own runtime kernel launch orchestration.
 
-- Open an issue for bugs or feature requests.
-- Small fixes can go directly to a PR.
-- Keep changes focused and explain the "why".
+## Pre-GA Priorities
 
-## Development Notes
+1. Architecture clarity (L4 patterns, L3 composition, kit separation).
+2. Composition correctness (`graph::verify`, token/resource flow).
+3. Ergonomics of pattern declaration and diagnostics.
 
-- Rust 1.85+ (Edition 2024).
-- CUDA Toolkit 12.6+ for GPU-dependent crates/tests.
-- Follow `AGENTS.md` for implementation rules and test layout.
+Avoid adding heavy CI gates or perf policy before architecture stabilizes.
 
-## Testing
+## Minimal Verification
 
-- CPU-only tests: `cargo test`
-- CUDA tests (serialized by default via `.cargo/config.toml`): `cargo test --features cuda-tests`
-- Benchmarks: run in release and serially (see README).
-- FFI boundary guard: `scripts/check-ffi-boundary.sh`
-- Workspace consistency gate: `scripts/ci/check_workspace_consistency.sh`
-- Merge-quality gate (single source of truth): `IRFFI_CUDA_GENCODE='arch=compute_89,code=sm_89;arch=compute_90,code=sm_90' scripts/ci/strict_gate.sh`
+Run the manifest + registry integrity checks:
 
-## Domain Commands
+```bash
+scripts/check.sh
+```
 
-- `ffi-only`: `scripts/ci/ffi_fast.sh`
-- `rawkernels-pr`: `IRFFI_CUDA_GENCODE='arch=compute_89,code=sm_89;arch=compute_90,code=sm_90' scripts/ci/rawkernels_pr.sh`
-- `ax-compile-pr`: `IRFFI_CUDA_GENCODE='arch=compute_89,code=sm_89;arch=compute_90,code=sm_90' scripts/ci/ax_compile_pr.sh`
-- `ax-full-main`: `IRFFI_CUDA_GENCODE='arch=compute_89,code=sm_89;arch=compute_90,code=sm_90' scripts/ci/ax_full_main.sh`
+Generate instantiation TUs for a fast edit loop:
 
-## Pull Requests
+```bash
+AX_COMPILE_MODE=dev_fast scripts/compile.sh
+```
 
-- Describe the change and motivation.
-- Include tests for new or changed behavior.
-- Update docs and changelog when appropriate.
+Generate full proof-surface instantiations:
+
+```bash
+AX_COMPILE_MODE=proof_full scripts/compile.sh
+```
+
+## Coding Notes
+
+1. Canonical public preset surface is `axp::l4::preset::*`.
+2. Keep L3 internals implementation-facing.
+3. Prefer deleting stale surfaces over preserving pre-GA compatibility shims.

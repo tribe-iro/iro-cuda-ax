@@ -35,7 +35,6 @@
 #include "../protocol/sync/contracts.hpp"
 #include "../protocol/view/contracts.hpp"
 #include "../protocol/ownership/contracts.hpp"
-#include "../protocol/ownership/bundles.hpp"
 #include "../protocol/stage/resources.hpp"
 #include "../protocol/convert/contracts.hpp"
 #include "../protocol/tma/contracts.hpp"

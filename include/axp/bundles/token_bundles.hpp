@@ -176,9 +176,4 @@ using BarrierReady = axp::protocol::sync::BarrierReady<Subject, ExecGroup, Lifet
 template<class Subject, class ExecGroup, class Lifetime = iro::token::lifetime::block>
 using BarrierArrived = axp::protocol::sync::BarrierArrived<Subject, ExecGroup, Lifetime>;
 
-template<class PipeSubj>
-using PipeAdvance = iro::token::bundle<
-    iro::token::slot_state<PipeSubj, iro::token::state::free>
->;
-
 } // namespace axp::bundle

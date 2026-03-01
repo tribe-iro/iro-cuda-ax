@@ -87,6 +87,164 @@ struct HistogramPattern {};
 template<class Recipe, int TileElems, class InSubj, class OutSubj>
 struct SortPattern {};
 
+// Ergonomic config wrappers for the highest-arity pattern families.
+template<class Recipe,
+         int BlockM, int BlockN, int BlockK, int Stages, int KTiles,
+         class ASubj = axp::subject::MatrixA,
+         class BSubj = axp::subject::MatrixB,
+         class CSubj = axp::subject::MatrixC,
+         class WgmmaSubj = axp::subject::Accumulator,
+         class MemoryPatternA = axp::intent::memory_pattern::Optimized,
+         class MemoryPatternB = axp::intent::memory_pattern::Optimized,
+         class LoadModeA = axp::intent::load_mode::AsyncPrefetch,
+         class LoadModeB = axp::intent::load_mode::AsyncPrefetch,
+         class Schedule = axp::intent::schedule::Pipelined,
+         class ScaleASubj = iro::contract::subject::global,
+         class ScaleBSubj = iro::contract::subject::global>
+struct GemmConfig {
+    using recipe = Recipe;
+    static constexpr int block_m = BlockM;
+    static constexpr int block_n = BlockN;
+    static constexpr int block_k = BlockK;
+    static constexpr int stages = Stages;
+    static constexpr int k_tiles = KTiles;
+    using a_subject = ASubj;
+    using b_subject = BSubj;
+    using c_subject = CSubj;
+    using wgmma_subject = WgmmaSubj;
+    using memory_pattern_a = MemoryPatternA;
+    using memory_pattern_b = MemoryPatternB;
+    using load_mode_a = LoadModeA;
+    using load_mode_b = LoadModeB;
+    using schedule = Schedule;
+    using scale_a_subject = ScaleASubj;
+    using scale_b_subject = ScaleBSubj;
+};
+
+template<class Config>
+concept GemmConfigLike = requires {
+    typename Config::recipe;
+    typename Config::a_subject;
+    typename Config::b_subject;
+    typename Config::c_subject;
+    typename Config::wgmma_subject;
+    typename Config::memory_pattern_a;
+    typename Config::memory_pattern_b;
+    typename Config::load_mode_a;
+    typename Config::load_mode_b;
+    typename Config::schedule;
+    typename Config::scale_a_subject;
+    typename Config::scale_b_subject;
+    { Config::block_m } -> std::convertible_to<int>;
+    { Config::block_n } -> std::convertible_to<int>;
+    { Config::block_k } -> std::convertible_to<int>;
+    { Config::stages } -> std::convertible_to<int>;
+    { Config::k_tiles } -> std::convertible_to<int>;
+};
+
+template<class Config>
+struct GemmFromConfig {
+    static_assert(GemmConfigLike<Config>,
+                  "axp::l4::GemmFromConfig: Config must define recipe, shape/stage ints, subjects, "
+                  "memory/load intent, schedule, and scale subjects.");
+    using type = GemmPattern<
+        typename Config::recipe,
+        Config::block_m, Config::block_n, Config::block_k, Config::stages, Config::k_tiles,
+        typename Config::a_subject, typename Config::b_subject, typename Config::c_subject, typename Config::wgmma_subject,
+        typename Config::memory_pattern_a, typename Config::memory_pattern_b,
+        typename Config::load_mode_a, typename Config::load_mode_b,
+        typename Config::schedule,
+        typename Config::scale_a_subject, typename Config::scale_b_subject
+    >;
+};
+
+template<class Config>
+using GemmPatternT = typename GemmFromConfig<Config>::type;
+
+template<class Recipe,
+         int TileQ, int TileK, int TileV, int HeadDim, int Stages, int SlotIdx,
+         class QSubj = axp::subject::AttentionQ,
+         class KSubj = axp::subject::AttentionK,
+         class VSubj = axp::subject::AttentionV,
+         class AccSubj = axp::subject::Accumulator,
+         class OldStateSubj = axp::subject::AttentionS,
+         class OutStateSubj = axp::subject::indexed<axp::tag::S, 1>,
+         class MemoryPatternQ = axp::intent::memory_pattern::Optimized,
+         class MemoryPatternK = axp::intent::memory_pattern::Optimized,
+         class MemoryPatternV = axp::intent::memory_pattern::Optimized,
+         class LoadModeQ = axp::intent::load_mode::AsyncPrefetch,
+         class LoadModeK = axp::intent::load_mode::AsyncPrefetch,
+         class LoadModeV = axp::intent::load_mode::AsyncPrefetch,
+         class Schedule = axp::intent::schedule::Pipelined,
+         class TileSkip = axp::intent::tile_skip::None>
+struct AttentionConfig {
+    using recipe = Recipe;
+    static constexpr int tile_q = TileQ;
+    static constexpr int tile_k = TileK;
+    static constexpr int tile_v = TileV;
+    static constexpr int head_dim = HeadDim;
+    static constexpr int stages = Stages;
+    static constexpr int slot_idx = SlotIdx;
+    using q_subject = QSubj;
+    using k_subject = KSubj;
+    using v_subject = VSubj;
+    using acc_subject = AccSubj;
+    using old_state_subject = OldStateSubj;
+    using out_state_subject = OutStateSubj;
+    using memory_pattern_q = MemoryPatternQ;
+    using memory_pattern_k = MemoryPatternK;
+    using memory_pattern_v = MemoryPatternV;
+    using load_mode_q = LoadModeQ;
+    using load_mode_k = LoadModeK;
+    using load_mode_v = LoadModeV;
+    using schedule = Schedule;
+    using tile_skip = TileSkip;
+};
+
+template<class Config>
+concept AttentionConfigLike = requires {
+    typename Config::recipe;
+    typename Config::q_subject;
+    typename Config::k_subject;
+    typename Config::v_subject;
+    typename Config::acc_subject;
+    typename Config::old_state_subject;
+    typename Config::out_state_subject;
+    typename Config::memory_pattern_q;
+    typename Config::memory_pattern_k;
+    typename Config::memory_pattern_v;
+    typename Config::load_mode_q;
+    typename Config::load_mode_k;
+    typename Config::load_mode_v;
+    typename Config::schedule;
+    typename Config::tile_skip;
+    { Config::tile_q } -> std::convertible_to<int>;
+    { Config::tile_k } -> std::convertible_to<int>;
+    { Config::tile_v } -> std::convertible_to<int>;
+    { Config::head_dim } -> std::convertible_to<int>;
+    { Config::stages } -> std::convertible_to<int>;
+    { Config::slot_idx } -> std::convertible_to<int>;
+};
+
+template<class Config>
+struct AttentionFromConfig {
+    static_assert(AttentionConfigLike<Config>,
+                  "axp::l4::AttentionFromConfig: Config must define recipe, tile/head/stage ints, "
+                  "subjects, memory/load intent, schedule, and tile_skip.");
+    using type = AttentionPattern<
+        typename Config::recipe,
+        Config::tile_q, Config::tile_k, Config::tile_v, Config::head_dim, Config::stages, Config::slot_idx,
+        typename Config::q_subject, typename Config::k_subject, typename Config::v_subject,
+        typename Config::acc_subject, typename Config::old_state_subject, typename Config::out_state_subject,
+        typename Config::memory_pattern_q, typename Config::memory_pattern_k, typename Config::memory_pattern_v,
+        typename Config::load_mode_q, typename Config::load_mode_k, typename Config::load_mode_v,
+        typename Config::schedule, typename Config::tile_skip
+    >;
+};
+
+template<class Config>
+using AttentionPatternT = typename AttentionFromConfig<Config>::type;
+
 namespace preset {
 
 // Common subjects for presets.

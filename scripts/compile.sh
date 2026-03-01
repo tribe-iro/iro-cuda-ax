@@ -1,12 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-
-if [[ -z "${IRFFI_CUDA_GENCODE:-}" ]]; then
-  echo "IRFFI_CUDA_GENCODE must be set, e.g. arch=compute_89,code=sm_89" >&2
-  exit 1
-fi
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 MODE="${AX_COMPILE_MODE:-dev_fast}"
 if [[ "${MODE}" != "dev_fast" && "${MODE}" != "proof_full" ]]; then
@@ -14,20 +9,21 @@ if [[ "${MODE}" != "dev_fast" && "${MODE}" != "proof_full" ]]; then
   exit 1
 fi
 
-# Fast local defaults; callers can override explicitly.
-export IRFFI_CUDA_OPT_LEVEL="${IRFFI_CUDA_OPT_LEVEL:-0}"
-export IRFFI_CUDA_JOBS="${IRFFI_CUDA_JOBS:-4}"
+"${ROOT_DIR}/scripts/check.sh"
 
-"${ROOT_DIR}/scripts/ax/check.sh"
+OUT_ROOT="${ROOT_DIR}/tests/kernels/generated"
+REGISTRY_JSON="${ROOT_DIR}/tools/generated/graph_registry_index.json"
 
-if [[ "${MODE}" == "proof_full" ]]; then
-  cargo build -p iro-cuda-axkernels --features proof_full
-else
-  # Keep local edit loop fast by default in dev_fast. Set AX_DEVFAST_FULL_NVCC=1
-  # to force full NVCC compilation of generated dev_fast TUs.
-  if [[ "${AX_DEVFAST_FULL_NVCC:-0}" == "1" ]]; then
-    cargo build -p iro-cuda-axkernels --features dev_fast
-  else
-    AXP_SKIP_NVCC=1 cargo build -p iro-cuda-axkernels --features dev_fast
-  fi
-fi
+for arch in sm89 sm90; do
+  OUT_DIR="${OUT_ROOT}/${arch}"
+  mkdir -p "${OUT_DIR}"
+  rm -f "${OUT_DIR}"/*.cu
+
+  python3 "${ROOT_DIR}/tools/gen_instantiations.py" \
+    --manifest "${ROOT_DIR}/manifests/kernels_${arch}.json" \
+    --out-dir "${OUT_DIR}" \
+    --registry "${REGISTRY_JSON}" \
+    --profile "${MODE}"
+done
+
+echo "generated instantiation TUs for profile ${MODE}"

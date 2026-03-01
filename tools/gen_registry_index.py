@@ -355,7 +355,7 @@ def render_header(rows: list[dict]) -> str:
     overrides_block = "\n\n".join(override_specs)
 
     return f"""// Generated file. DO NOT EDIT.
-// Regenerate with: crates/iro-cuda-axkernels/tools/gen_registry_index.py
+// Regenerate with: tools/gen_registry_index.py
 
 #pragma once
 
@@ -364,7 +364,6 @@ def render_header(rows: list[dict]) -> str:
 #endif
 
 #include "../l4.hpp"
-#include "../l3_presets.hpp"
 #include "bind_key.hpp"
 #include "../graph/hash.hpp"
 #include <type_traits>
@@ -442,8 +441,7 @@ def main() -> int:
     script_dir = Path(__file__).resolve().parent
     default_json_out = script_dir / "generated" / "graph_registry_index.json"
     default_header_out = (
-        script_dir.parent.parent
-        / "iro-cuda-axprimitives"
+        script_dir.parent
         / "include"
         / "axp"
         / "l4"

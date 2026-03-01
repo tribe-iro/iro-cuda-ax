@@ -2140,8 +2140,55 @@ struct select_non_wgmma_gemm<false,
                              ATma, BTma, Cap, EpiloguePolicy> {
     static_assert(BlockM == -1,
                   "axp::level3::GemmTile: unsupported non-WGMMA shape. "
-                  "Legacy GEMM fallback is removed.");
+                  "Provide a warp-path configuration or a WGMMA-capable target.");
     using type = void;
+};
+
+template<bool UseWarpPath,
+         class Recipe, int BlockM, int BlockN, int BlockK, int Stages, int KTiles,
+         class ASubj, class BSubj, class CSubj, class ScaleASubj, class ScaleBSubj, class WgmmaSubj,
+         class MemoryPatternA, class MemoryPatternB,
+         class LoadModeA, class LoadModeB, class Schedule,
+         class ATma, class BTma, class Cap>
+struct select_has_wgmma_gemm;
+
+template<class Recipe, int BlockM, int BlockN, int BlockK, int Stages, int KTiles,
+         class ASubj, class BSubj, class CSubj, class ScaleASubj, class ScaleBSubj, class WgmmaSubj,
+         class MemoryPatternA, class MemoryPatternB,
+         class LoadModeA, class LoadModeB, class Schedule,
+         class ATma, class BTma, class Cap>
+struct select_has_wgmma_gemm<true,
+                             Recipe, BlockM, BlockN, BlockK, Stages, KTiles,
+                             ASubj, BSubj, CSubj, ScaleASubj, ScaleBSubj, WgmmaSubj,
+                             MemoryPatternA, MemoryPatternB, LoadModeA, LoadModeB, Schedule,
+                             ATma, BTma, Cap> {
+    using type = typename select_non_wgmma_gemm<
+        true,
+        Recipe, BlockM, BlockN, BlockK, Stages, KTiles,
+        ASubj, BSubj, CSubj, ScaleASubj, ScaleBSubj, WgmmaSubj,
+        MemoryPatternA, MemoryPatternB, LoadModeA, LoadModeB, Schedule,
+        ATma, BTma, Cap
+    >::type;
+};
+
+template<class Recipe, int BlockM, int BlockN, int BlockK, int Stages, int KTiles,
+         class ASubj, class BSubj, class CSubj, class ScaleASubj, class ScaleBSubj, class WgmmaSubj,
+         class MemoryPatternA, class MemoryPatternB,
+         class LoadModeA, class LoadModeB, class Schedule,
+         class ATma, class BTma, class Cap>
+struct select_has_wgmma_gemm<false,
+                             Recipe, BlockM, BlockN, BlockK, Stages, KTiles,
+                             ASubj, BSubj, CSubj, ScaleASubj, ScaleBSubj, WgmmaSubj,
+                             MemoryPatternA, MemoryPatternB, LoadModeA, LoadModeB, Schedule,
+                             ATma, BTma, Cap> {
+    using type = typename axp::level3::gemm::GemmTileWgmmaImpl<
+        Recipe, BlockM, BlockN, BlockK, Stages, KTiles, ASubj, BSubj, CSubj, ScaleASubj, ScaleBSubj,
+        WgmmaSubj, MemoryPatternA, MemoryPatternB, LoadModeA, LoadModeB, Schedule,
+        axp::level3::gemm::detail::pipe_a_tag,
+        axp::level3::gemm::detail::pipe_b_tag,
+        ATma, BTma,
+        Cap
+    >::type;
 };
 } // namespace gemm::detail
 
@@ -2226,13 +2273,18 @@ struct resolve_impl<GemmTilePattern<Recipe, BlockM, BlockN, BlockK, Stages, KTil
                     Cap,
                     std::enable_if_t<Cap::has_wgmma && std::is_same_v<typename Recipe::acc, iro::elem::f32>>> {
     static constexpr bool supported = true;
-    using type = typename axp::level3::gemm::GemmTileWgmmaImpl<
-        Recipe, BlockM, BlockN, BlockK, Stages, KTiles, ASubj, BSubj, CSubj, ScaleASubj, ScaleBSubj,
-        WgmmaSubj, MemoryPatternA, MemoryPatternB, LoadModeA, LoadModeB, Schedule,
-        axp::level3::gemm::detail::pipe_a_tag,
-        axp::level3::gemm::detail::pipe_b_tag,
-        ATma, BTma,
-        Cap
+    static constexpr bool kWmmaMacroShape =
+        axp::protocol::compute::detail::is_wmma_shape_v<
+            BlockM, BlockN, BlockK,
+            iro::verify::recipe_in_a_t<Recipe>,
+            iro::verify::recipe_in_b_t<Recipe>,
+            typename Recipe::acc>;
+    using type = typename axp::level3::gemm::detail::select_has_wgmma_gemm<
+        kWmmaMacroShape,
+        Recipe, BlockM, BlockN, BlockK, Stages, KTiles,
+        ASubj, BSubj, CSubj, ScaleASubj, ScaleBSubj, WgmmaSubj,
+        MemoryPatternA, MemoryPatternB, LoadModeA, LoadModeB, Schedule,
+        ATma, BTma, Cap
     >::type;
 };
 

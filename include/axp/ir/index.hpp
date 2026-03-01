@@ -5,4 +5,3 @@
 #endif
 
 #include "concepts.hpp"
-#include "lowering_contract.hpp"
