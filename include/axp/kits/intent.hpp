@@ -21,10 +21,10 @@ template<class Subj, class PipeTag>
 using tma_barrier_subj = derived_subj<Subj, PipeTag>;
 
 template<class Subj>
-using tma_coord0_subj = iro::contract::subject::pair<Subj, axp::subject::Coord0>;
+using tma_coord0_subj = iro::contract::subject::pair<Subj, axp::subject::wire<axp::tag::Coord0, 0>>;
 
 template<class Subj>
-using tma_coord1_subj = iro::contract::subject::pair<Subj, axp::subject::Coord1>;
+using tma_coord1_subj = iro::contract::subject::pair<Subj, axp::subject::wire<axp::tag::Coord1, 1>>;
 
 using coord_payload_block = iro::contract::ScalarDesc<iro::elem::i32, iro::dist::uniform<iro::scope::block>>;
 
@@ -98,6 +98,11 @@ struct select_tma<axp::intent::load_mode::Streaming, Cap, GlobalTile, Subj, Pipe
     using type = axp::level2::staging::streaming_tag;
 };
 
+template<class Cap, class GlobalTile, class Subj, class PipeTag>
+struct select_tma<axp::intent::load_mode::DeterministicLatency, Cap, GlobalTile, Subj, PipeTag> {
+    using type = axp::level2::staging::streaming_tag;
+};
+
 } // namespace axp::kit::detail
 
 namespace axp::kit::expert {
@@ -158,6 +163,16 @@ template<class Cap>
 struct select_schedule<axp::intent::schedule::ProducerConsumer, Cap> {
     static_assert(Cap::has_wgmma, "ProducerConsumer schedule requires WGMMA-capable target");
     using type = axp::intent::schedule::ProducerConsumer;
+};
+
+template<class Cap>
+struct select_schedule<axp::intent::schedule::PersistentPipeline, Cap> {
+    using type = axp::intent::schedule::PersistentPipeline;
+};
+
+template<class Cap>
+struct select_schedule<axp::intent::schedule::DeterministicLatency, Cap> {
+    using type = axp::intent::schedule::DeterministicLatency;
 };
 
 template<class Schedule, class Cap>

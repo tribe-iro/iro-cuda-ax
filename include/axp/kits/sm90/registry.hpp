@@ -4,13 +4,6 @@
 #include "../../realize/sm90.hpp"
 #include "../../level0/specialize.hpp"
 
-namespace axp::level2::attention {
-template<class Recipe, class PredSubj, class ExecGroup>
-struct TileSkipHook;
-template<class Recipe, class PredSubj, class ExecGroup>
-struct TileSkipHookRealization;
-} // namespace axp::level2::attention
-
 namespace axp::kit::sm90 {
 
 namespace detail {
@@ -1148,10 +1141,10 @@ struct registry_for<axp::level0::MaskAnd<
 };
 
 template<class Recipe, class PredSubj, class ExecGroup>
-struct registry_for<axp::level2::attention::TileSkipHook<Recipe, PredSubj, ExecGroup>> {
+struct registry_for<axp::level3::domain::attention::TileSkipHook<Recipe, PredSubj, ExecGroup>> {
     using type = iro::util::type_list<
         iro::registry::RealizationEntry<
-            axp::level2::attention::TileSkipHookRealization<Recipe, PredSubj, ExecGroup>,
+            axp::level3::domain::attention::TileSkipHookRealization<Recipe, PredSubj, ExecGroup>,
             iro::cap::sm90>
     >;
 };

@@ -5,18 +5,31 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TOOLS_DIR="${ROOT_DIR}/tools"
 REGISTRY_JSON="${TOOLS_DIR}/generated/graph_registry_index.json"
 REGISTRY_HEADER="${ROOT_DIR}/include/axp/l4/graph_registry_index.hpp"
+"${ROOT_DIR}/scripts/gen_layer_adapters.sh"
+AX_TOOL="$("${ROOT_DIR}/scripts/build_ax_tool.sh")"
+mapfile -t MANIFESTS < <(printf '%s\n' "${ROOT_DIR}"/manifests/kernels_*.json | sort)
+if [[ ${#MANIFESTS[@]} -eq 0 ]]; then
+  echo "error: no manifests found under ${ROOT_DIR}/manifests" >&2
+  exit 1
+fi
 
-python3 "${TOOLS_DIR}/gen_registry_index.py" \
+GEN_ARGS=()
+VAL_ARGS=()
+for manifest in "${MANIFESTS[@]}"; do
+  if [[ ! -f "${manifest}" ]]; then
+    continue
+  fi
+  GEN_ARGS+=(--manifest "${manifest}")
+  VAL_ARGS+=(--manifest "${manifest}")
+done
+
+"${AX_TOOL}" gen-registry-index \
   --json-out "${REGISTRY_JSON}" \
   --header-out "${REGISTRY_HEADER}" \
-  --manifest "${ROOT_DIR}/manifests/kernels_sm89.json" \
-  --manifest "${ROOT_DIR}/manifests/kernels_sm90.json" \
-  --manifest "${ROOT_DIR}/manifests/kernels_sm100.json"
+  "${GEN_ARGS[@]}"
 
-python3 "${TOOLS_DIR}/validate_manifest.py" \
+"${AX_TOOL}" validate-manifest \
   --registry "${REGISTRY_JSON}" \
-  --manifest "${ROOT_DIR}/manifests/kernels_sm89.json" \
-  --manifest "${ROOT_DIR}/manifests/kernels_sm90.json" \
-  --manifest "${ROOT_DIR}/manifests/kernels_sm100.json"
+  "${VAL_ARGS[@]}"
 
 echo "manifest and registry checks passed"

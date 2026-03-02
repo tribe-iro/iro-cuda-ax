@@ -12,3 +12,5 @@
 #include "softmax.hpp"
 #include "histogram.hpp"
 #include "sort.hpp"
+#include "streaming.hpp"
+#include "scientific.hpp"

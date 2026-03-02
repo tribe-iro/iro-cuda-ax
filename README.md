@@ -13,7 +13,14 @@ This repository contains only C++ AX artifacts:
 
 No Rust crates or Cargo packaging exist in this repository.
 
+Tooling policy: scripts in `tools/**` may validate manifests and generate C++ instantiation wrappers, but must not generate CUDA kernel definitions. Kernel semantics stay in handwritten C++ templates under `include/axp/**` (and compile instantiation units under `tests/kernels/**`).
+Manifest/registry generation and instantiation codegen are implemented in C++ (`tools/ax_manifest_tool.cpp`) and invoked by `scripts/check.sh` / `scripts/compile.sh`.
+Pre-GA policy: no backward-compatibility shims or legacy aliases are maintained.
+Layering policy is strict adjacency only: `L4 -> L3 -> L2 -> L1 -> L0` (no skip-layer dependencies).
+Pass-through interfaces are canonical for consistency and may be generated for 1:1 mappings.
+
 Canonical public presets are `axp::l4::preset::*`.
+Manifest schema does not include an `entry` field.
 
 ## Build
 
@@ -33,3 +40,9 @@ or by adding `include/` to your compiler include paths.
 ```bash
 scripts/check.sh
 ```
+
+## Architecture Docs
+
+- `docs/architecture/layer_contract_law.md`
+- `docs/architecture/protocol_planes.md`
+- `docs/architecture/reference_kernels.md`

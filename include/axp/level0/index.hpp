@@ -16,6 +16,9 @@
 
 #include "stage.hpp"
 #include "sync.hpp"
+#include "order.hpp"
+#include "atomic.hpp"
+#include "epoch.hpp"
 #include "compute_alias.hpp"
 #include "view.hpp"
 #include "ownership.hpp"

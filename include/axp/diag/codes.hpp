@@ -5,12 +5,6 @@
 namespace axp::diag {
 
 enum class Code : std::uint32_t {
-    // Legacy high-level AX categories (kept for compatibility).
-    TOKEN_MISSING = 0xA100,
-    TOKEN_ILLEGAL_TRANSITION = 0xA101,
-    CAPABILITY_UNSATISFIED = 0xA200,
-    OBLIGATION_UNRESOLVED = 0xA300,
-
     // Token and protocol diagnostics.
     MISSING_VISIBLE_AT = 0xA401,
     MISSING_ALIVE = 0xA402,
@@ -55,10 +49,6 @@ namespace detail {
 
 constexpr const char* stable_id_token(Code code) {
     switch (code) {
-        case Code::TOKEN_MISSING: return "axp.diag.TOKEN_MISSING";
-        case Code::TOKEN_ILLEGAL_TRANSITION: return "axp.diag.TOKEN_ILLEGAL_TRANSITION";
-        case Code::CAPABILITY_UNSATISFIED: return "axp.diag.CAPABILITY_UNSATISFIED";
-        case Code::OBLIGATION_UNRESOLVED: return "axp.diag.OBLIGATION_UNRESOLVED";
         case Code::MISSING_VISIBLE_AT: return "axp.diag.MISSING_VISIBLE_AT";
         case Code::MISSING_ALIVE: return "axp.diag.MISSING_ALIVE";
         case Code::MISSING_SYNC_AT: return "axp.diag.MISSING_SYNC_AT";
@@ -94,10 +84,6 @@ constexpr const char* stable_id_token(Code code) {
 
 constexpr iro::diag::Code to_core(Code code) {
     switch (code) {
-        case Code::TOKEN_MISSING: return iro::diag::Code::MISSING_SYNC_AT;
-        case Code::TOKEN_ILLEGAL_TRANSITION: return iro::diag::Code::SCOPE_INSUFFICIENT;
-        case Code::CAPABILITY_UNSATISFIED: return iro::diag::Code::CAP_UNSUPPORTED;
-        case Code::OBLIGATION_UNRESOLVED: return iro::diag::Code::NO_REALIZATION_FOUND;
         case Code::MISSING_VISIBLE_AT: return iro::diag::Code::MISSING_VISIBLE_AT;
         case Code::MISSING_ALIVE: return iro::diag::Code::MISSING_ALIVE;
         case Code::MISSING_SYNC_AT: return iro::diag::Code::MISSING_SYNC_AT;
@@ -151,10 +137,5 @@ using core_diagnostic_t = iro::diag::Diagnostic<to_core_code<C>::value, stable_i
 
 template<Code C>
 using diagnostic_t = core_diagnostic_t<C>;
-
-using TokenMissing = diagnostic_t<Code::TOKEN_MISSING>;
-using TokenIllegalTransition = diagnostic_t<Code::TOKEN_ILLEGAL_TRANSITION>;
-using CapabilityUnsatisfied = diagnostic_t<Code::CAPABILITY_UNSATISFIED>;
-using ObligationUnresolved = diagnostic_t<Code::OBLIGATION_UNRESOLVED>;
 
 } // namespace axp::diag

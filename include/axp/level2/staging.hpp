@@ -1,8 +1,7 @@
 #pragma once
 
 #include <iro_cuda_ax_core.hpp>
-#include "../level0/stage.hpp"
-#include "../protocol/tma/contracts.hpp"
+#include "../level1/passthrough.hpp"
 #include "detail/compose.hpp"
 #include "registry.hpp"
 
@@ -101,7 +100,7 @@ struct tma_copy_selector<true> {
     template<class Recipe, class MapHandle, class OutTile, class MapSubj, class SlotSubj, class BarrierSubj,
              class Coord0Payload, class Coord1Payload, class Coord0Subj, class Coord1Subj,
              class ExecGroup, class Lifetime>
-    using type = axp::protocol::tma::BulkTmaCopy2D<
+    using type = axp::level1::proto::tma::BulkTmaCopy2D<
         Recipe, MapHandle, OutTile, MapSubj, SlotSubj, BarrierSubj,
         Coord0Payload, Coord1Payload, Coord0Subj, Coord1Subj, ExecGroup, Lifetime, OutTile::bytes
     >;
@@ -112,7 +111,7 @@ struct tma_copy_selector<false> {
     template<class Recipe, class MapHandle, class OutTile, class MapSubj, class SlotSubj, class BarrierSubj,
              class Coord0Payload, class Coord1Payload, class Coord0Subj, class Coord1Subj,
              class ExecGroup, class Lifetime>
-    using type = axp::protocol::tma::BulkTmaCopy1D<
+    using type = axp::level1::proto::tma::BulkTmaCopy1D<
         Recipe, MapHandle, OutTile, MapSubj, SlotSubj, BarrierSubj,
         Coord0Payload, Coord0Subj, ExecGroup, Lifetime, OutTile::bytes
     >;
@@ -126,7 +125,7 @@ struct tma_store_selector<true> {
     template<class Recipe, class MapHandle, class InTile, class MapSubj, class SlotSubj, class BarrierSubj,
              class Coord0Payload, class Coord1Payload, class Coord0Subj, class Coord1Subj,
              class ExecGroup, class Lifetime>
-    using type = axp::protocol::tma::BulkTmaStore2D<
+    using type = axp::level1::proto::tma::BulkTmaStore2D<
         Recipe, MapHandle, InTile, MapSubj, SlotSubj, BarrierSubj,
         Coord0Payload, Coord1Payload, Coord0Subj, Coord1Subj, ExecGroup, Lifetime, InTile::bytes
     >;
@@ -137,7 +136,7 @@ struct tma_store_selector<false> {
     template<class Recipe, class MapHandle, class InTile, class MapSubj, class SlotSubj, class BarrierSubj,
              class Coord0Payload, class Coord1Payload, class Coord0Subj, class Coord1Subj,
              class ExecGroup, class Lifetime>
-    using type = axp::protocol::tma::BulkTmaStore1D<
+    using type = axp::level1::proto::tma::BulkTmaStore1D<
         Recipe, MapHandle, InTile, MapSubj, SlotSubj, BarrierSubj,
         Coord0Payload, Coord0Subj, ExecGroup, Lifetime, InTile::bytes
     >;
@@ -152,7 +151,7 @@ struct tma_multicast_copy_selector<true> {
              class MaskPayload, class MaskSubj,
              class Coord0Payload, class Coord1Payload, class Coord0Subj, class Coord1Subj,
              class ExecGroup, class Lifetime>
-    using type = axp::protocol::tma::BulkTmaCopyMulticast2D<
+    using type = axp::level1::proto::tma::BulkTmaCopyMulticast2D<
         Recipe, MapHandle, OutTile, MapSubj, SlotSubj, BarrierSubj,
         MaskPayload, MaskSubj,
         Coord0Payload, Coord1Payload, Coord0Subj, Coord1Subj,
@@ -166,7 +165,7 @@ struct tma_multicast_copy_selector<false> {
              class MaskPayload, class MaskSubj,
              class Coord0Payload, class Coord1Payload, class Coord0Subj, class Coord1Subj,
              class ExecGroup, class Lifetime>
-    using type = axp::protocol::tma::BulkTmaCopyMulticast1D<
+    using type = axp::level1::proto::tma::BulkTmaCopyMulticast1D<
         Recipe, MapHandle, OutTile, MapSubj, SlotSubj, BarrierSubj,
         MaskPayload, MaskSubj,
         Coord0Payload, Coord0Subj, ExecGroup, Lifetime, OutTile::bytes
@@ -179,17 +178,17 @@ template<class Recipe, class InTile, class OutTile, class InSubj, class PipeTag,
 struct StageGmemToSmemImpl {
     static_assert(std::is_same_v<IssueExecGroup, iro::exec::block>,
                   "StageGmemToSmemImpl: IssueExecGroup must be block for non-TMA staging");
-    using Issue = axp::level0::AsyncCopy<
+    using Issue = axp::level1::low::AsyncCopy<
         Recipe, InTile, OutTile, InSubj, PipeTag, SlotSubj,
         iro::exec::block, Lifetime, Slots, SwizzleAtom
     >;
-    using Wait = axp::level0::WaitSlot<
+    using Wait = axp::level1::low::WaitSlot<
         Recipe, OutTile, SlotSubj, iro::exec::block, Lifetime
     >;
-    using Mark = axp::level0::MarkConsumed<
+    using Mark = axp::level1::low::MarkConsumed<
         Recipe, SlotSubj, MarkExecGroup, Lifetime, OutTile::bytes
     >;
-    using Release = axp::level0::ReleaseSlot<
+    using Release = axp::level1::low::ReleaseSlot<
         Recipe, SlotSubj, iro::exec::block, Lifetime
     >;
 
@@ -222,17 +221,17 @@ struct StageGmemToSmemStreamingImpl {
                   "StageGmemToSmemStreamingImpl: IssueExecGroup must be block");
     static_assert(std::is_void_v<SwizzleAtom>,
                   "StageGmemToSmemStreamingImpl: swizzle requires async prefetch (cp.async/TMA)");
-    using Issue = axp::level0::DirectCopy<
+    using Issue = axp::level1::low::DirectCopy<
         Recipe, InTile, OutTile, InSubj, PipeTag, SlotSubj,
         iro::exec::block, Lifetime, Slots, SwizzleAtom
     >;
-    using Wait = axp::level0::ReadySlot<
+    using Wait = axp::level1::low::ReadySlot<
         Recipe, OutTile, SlotSubj, iro::exec::block, Lifetime
     >;
-    using Mark = axp::level0::MarkConsumed<
+    using Mark = axp::level1::low::MarkConsumed<
         Recipe, SlotSubj, MarkExecGroup, Lifetime, OutTile::bytes
     >;
-    using Release = axp::level0::ReleaseSlot<
+    using Release = axp::level1::low::ReleaseSlot<
         Recipe, SlotSubj, iro::exec::block, Lifetime
     >;
 
@@ -278,13 +277,13 @@ struct StageGmemToSmemTmaImpl {
         Coord0Payload, Coord1Payload, Coord0Subj, Coord1Subj, IssueExecGroup, Lifetime
     >;
 
-    using Wait = axp::level0::CommitSlot<
+    using Wait = axp::level1::low::CommitSlot<
         Recipe, OutTile, SlotSubj, BarrierSubj, IssueExecGroup, Lifetime
     >;
-    using Mark = axp::level0::MarkConsumed<
+    using Mark = axp::level1::low::MarkConsumed<
         Recipe, SlotSubj, MarkExecGroup, Lifetime, OutTile::bytes
     >;
-    using Release = axp::level0::ReleaseSlot<
+    using Release = axp::level1::low::ReleaseSlot<
         Recipe, SlotSubj, IssueExecGroup, Lifetime
     >;
 
@@ -339,13 +338,13 @@ struct StageGmemToSmemMulticastTmaImpl {
         Coord0Payload, Coord1Payload, Coord0Subj, Coord1Subj, IssueExecGroup, Lifetime
     >;
 
-    using Wait = axp::level0::CommitSlot<
+    using Wait = axp::level1::low::CommitSlot<
         Recipe, OutTile, SlotSubj, BarrierSubj, iro::exec::block, Lifetime
     >;
-    using Mark = axp::level0::MarkConsumed<
+    using Mark = axp::level1::low::MarkConsumed<
         Recipe, SlotSubj, MarkExecGroup, Lifetime, OutTile::bytes
     >;
-    using Release = axp::level0::ReleaseSlot<
+    using Release = axp::level1::low::ReleaseSlot<
         Recipe, SlotSubj, iro::exec::block, Lifetime
     >;
 
@@ -377,16 +376,16 @@ struct StageGmemToSmemMulticastTmaImpl {
 template<class Recipe, class InTile, class OutTile, class SlotSubj, class OutSubj,
          class MarkExecGroup, class Lifetime, class Tma = void, class CapT = axp::target_cap>
 struct StageSmemToGmemImpl {
-    using Issue = axp::level0::StoreSmemToGmemSlot<
+    using Issue = axp::level1::low::StoreSmemToGmemSlot<
         Recipe, InTile, OutTile, SlotSubj, OutSubj, iro::exec::block, Lifetime
     >;
-    using Wait = axp::level0::PassSlot<
+    using Wait = axp::level1::low::PassSlot<
         Recipe, SlotSubj, iro::exec::block, Lifetime, InTile::bytes
     >;
-    using Mark = axp::level0::MarkConsumed<
+    using Mark = axp::level1::low::MarkConsumed<
         Recipe, SlotSubj, MarkExecGroup, Lifetime, InTile::bytes
     >;
-    using Release = axp::level0::ReleaseSlot<
+    using Release = axp::level1::low::ReleaseSlot<
         Recipe, SlotSubj, iro::exec::block, Lifetime
     >;
 
@@ -431,13 +430,13 @@ struct StageSmemToGmemTmaImpl {
         Coord0Payload, Coord1Payload, Coord0Subj, Coord1Subj, iro::exec::block, Lifetime
     >;
 
-    using Wait = axp::level0::CommitStoreSlot<
+    using Wait = axp::level1::low::CommitStoreSlot<
         Recipe, SlotSubj, BarrierSubj, iro::exec::block, Lifetime, InTile::bytes
     >;
-    using Mark = axp::level0::MarkConsumed<
+    using Mark = axp::level1::low::MarkConsumed<
         Recipe, SlotSubj, MarkExecGroup, Lifetime, InTile::bytes
     >;
-    using Release = axp::level0::ReleaseSlot<
+    using Release = axp::level1::low::ReleaseSlot<
         Recipe, SlotSubj, iro::exec::block, Lifetime
     >;
 

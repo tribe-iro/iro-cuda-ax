@@ -10,14 +10,6 @@ struct message {
 private:
     static constexpr const char* message_text() {
         switch (C) {
-            case Code::TOKEN_MISSING:
-                return "TOKEN_MISSING: required token not produced by upstream composition";
-            case Code::TOKEN_ILLEGAL_TRANSITION:
-                return "TOKEN_ILLEGAL_TRANSITION: token state transition violates contract";
-            case Code::CAPABILITY_UNSATISFIED:
-                return "CAPABILITY_UNSATISFIED: selected path requires unavailable target capability";
-            case Code::OBLIGATION_UNRESOLVED:
-                return "OBLIGATION_UNRESOLVED: no deterministic realization satisfies obligation set";
             case Code::MISSING_VISIBLE_AT:
                 return "MISSING_VISIBLE_AT: producer did not provide required visible_at token";
             case Code::MISSING_ALIVE:

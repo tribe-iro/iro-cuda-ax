@@ -1,7 +1,7 @@
 #pragma once
 
 #include <iro_cuda_ax_core.hpp>
-#include "../level1/blas.hpp"
+#include "../level2/blas.hpp"
 #include "registry.hpp"
 
 namespace axp::level3::elementwise {
@@ -20,7 +20,7 @@ struct ElementwiseTileImpl {
         iro::contract::Align<16>
     >;
 
-    using type = axp::level1::Copy<Recipe, Tile, Tile, InSubj, OutSubj, iro::exec::block, CapT>;
+    using type = axp::level2::Copy<Recipe, Tile, Tile, InSubj, OutSubj, iro::exec::block, CapT>;
 };
 
 } // namespace axp::level3::elementwise

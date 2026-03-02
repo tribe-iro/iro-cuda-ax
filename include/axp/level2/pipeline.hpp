@@ -1,7 +1,7 @@
 #pragma once
 
 #include <iro_cuda_ax_core.hpp>
-#include "../level0/stage.hpp"
+#include "../level1/passthrough.hpp"
 #include "detail/compose.hpp"
 
 namespace axp::level2::pipeline {
@@ -63,7 +63,7 @@ template<class Recipe, class IndexPayload, class InSubj, class OutSubj, class Ex
          class InExtra = iro::util::type_list<>, class OutExtra = iro::util::type_list<>,
          class CapT = axp::target_cap>
 using RotateSlots = axp::level2::detail::as_composition_t<
-    axp::level0::PipelineAdvance<Recipe, IndexPayload, InSubj, OutSubj, ExecGroup, Stages, InExtra, OutExtra>,
+    axp::level1::low::PipelineAdvance<Recipe, IndexPayload, InSubj, OutSubj, ExecGroup, Stages, InExtra, OutExtra>,
     CapT
 >;
 
@@ -71,14 +71,14 @@ using RotateSlots = axp::level2::detail::as_composition_t<
 template<class Recipe, class SlotSubj, class ExecGroup, class Lifetime, long long Bytes,
          class CapT = axp::target_cap>
 using Commit = axp::level2::detail::as_composition_t<
-    axp::level0::MarkConsumed<Recipe, SlotSubj, ExecGroup, Lifetime, Bytes>,
+    axp::level1::low::MarkConsumed<Recipe, SlotSubj, ExecGroup, Lifetime, Bytes>,
     CapT
 >;
 
 // Retire slot (used -> free).
 template<class Recipe, class SlotSubj, class ExecGroup, class Lifetime, class CapT = axp::target_cap>
 using Retire = axp::level2::detail::as_composition_t<
-    axp::level0::ReleaseSlot<Recipe, SlotSubj, ExecGroup, Lifetime>,
+    axp::level1::low::ReleaseSlot<Recipe, SlotSubj, ExecGroup, Lifetime>,
     CapT
 >;
 

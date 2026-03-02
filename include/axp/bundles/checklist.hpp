@@ -60,4 +60,54 @@ consteval bool is_wmma_tile_16x16_f16() {
            (Tile::shape::template dim<1>() == 16);
 }
 
+template<class Subject>
+struct is_slot_subject : std::false_type {};
+
+template<class PipeRes, int SlotIdx>
+struct is_slot_subject<iro::contract::res::slot_subject<PipeRes, SlotIdx>> : std::true_type {};
+
+template<class Subject>
+inline constexpr bool is_slot_subject_v = is_slot_subject<Subject>::value;
+
+template<class Subject>
+struct is_indexed_subject : std::false_type {};
+
+template<class Tag, int I>
+struct is_indexed_subject<iro::contract::subject::indexed<Tag, I>> : std::true_type {};
+
+template<class Subject>
+inline constexpr bool is_indexed_subject_v = is_indexed_subject<Subject>::value;
+
+template<class Subject>
+struct is_pair_subject : std::false_type {};
+
+template<class A, class B>
+struct is_pair_subject<iro::contract::subject::pair<A, B>> : std::true_type {};
+
+template<class Subject>
+inline constexpr bool is_pair_subject_v = is_pair_subject<Subject>::value;
+
+template<class Subject>
+consteval bool subject_follows_derivation_policy() {
+    return is_slot_subject_v<Subject> ||
+           is_indexed_subject_v<Subject> ||
+           is_pair_subject_v<Subject> ||
+           std::is_same_v<Subject, iro::contract::subject::global>;
+}
+
+template<class Subject>
+consteval bool subject_is_pipeline_slot() {
+    return is_slot_subject_v<Subject>;
+}
+
+template<class Subject>
+consteval bool subject_is_intermediate_wire() {
+    return is_indexed_subject_v<Subject>;
+}
+
+template<class Subject>
+consteval bool subject_is_composite_wire() {
+    return is_pair_subject_v<Subject>;
+}
+
 }

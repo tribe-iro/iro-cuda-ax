@@ -1,6 +1,5 @@
 #pragma once
-// Generated file. If regenerating upstream, run tools/axprimitives/wgmma_sanitize.py to
-// normalize declarations and keep nvcc-compatible syntax.
+// Generated file. Upstream-generated WGMMA entry points for SM90 realization.
 
 namespace axp::realize::sm90::detail {
 

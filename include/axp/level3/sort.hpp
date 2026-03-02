@@ -1,10 +1,8 @@
 #pragma once
 
 #include <iro_cuda_ax_core.hpp>
-#include "../level0/communication.hpp"
-#include "../level0/ownership.hpp"
-#include "../level0/fragment.hpp"
-#include "../level1/sort.hpp"
+#include "../level2/passthrough.hpp"
+#include "../level2/sort.hpp"
 #include "detail/compose.hpp"
 #include "detail/reg_pressure.hpp"
 #include "registry.hpp"
@@ -52,7 +50,7 @@ struct SortTileImpl {
     static constexpr int kBaseRegs = 8;
     using RegPressure = detail::reg_pressure_obligation<kBaseRegs, Frag>;
 
-    using Sort = axp::level1::BitonicSort<
+    using Sort = axp::level2::BitonicSort<
         Recipe, Frag, InSubj, OutSubj, ExecGroup, CapT
     >;
 
@@ -80,11 +78,11 @@ struct MergeTileImpl {
     static constexpr int kBaseRegs = 10;
     using RegPressure = detail::reg_pressure_obligation<kBaseRegs, Frag>;
 
-    struct Reverse : axp::level0::FragmentPermute<
+    struct Reverse : axp::level2::low::FragmentPermute<
         Recipe, Frag, InSubj, detail::merge_rev_subj, ExecGroup, detail::reverse_second_half<TileElems>
     > {};
 
-    using Merge = axp::level1::BitonicMerge<
+    using Merge = axp::level2::BitonicMerge<
         Recipe, Frag, detail::merge_rev_subj, OutSubj, ExecGroup, CapT
     >;
 
@@ -105,11 +103,11 @@ struct MergeWarpTileImpl {
     using Payload = iro::contract::ScalarDesc<typename Recipe::in, iro::dist::lane>;
     using RegPressure = detail::reg_pressure_const<8>;
 
-    using Reverse = axp::level0::WarpReverseSecondHalf<
+    using Reverse = axp::level2::low::WarpReverseSecondHalf<
         Recipe, Payload, InSubj, detail::merge_rev_subj, ExecGroup
     >;
 
-    using Merge = axp::level1::BitonicMergeCross<
+    using Merge = axp::level2::BitonicMergeCross<
         Recipe, Payload, detail::merge_rev_subj, OutSubj, ExecGroup, CapT
     >;
 

@@ -1,7 +1,7 @@
 #pragma once
 
 #include <iro_cuda_ax_core.hpp>
-#include "../level0/compute_alias.hpp"
+#include "../level1/passthrough.hpp"
 #include "registry.hpp"
 #include "detail/compose.hpp"
 
@@ -40,7 +40,7 @@ struct resolve_impl<
     std::enable_if_t<std::is_same_v<ExecGroup, iro::exec::warp>>> {
     static constexpr bool supported = true;
     using type = axp::level2::detail::as_composition_t<
-        axp::level0::MMA<Recipe, Shape, ATile, BTile, AccFrag, ASubj, BSubj, AccSubj>,
+        axp::level1::low::MMA<Recipe, Shape, ATile, BTile, AccFrag, ASubj, BSubj, AccSubj>,
         Cap
     >;
 };
@@ -53,7 +53,7 @@ struct resolve_impl<
     std::enable_if_t<iro::exec::is_warpgroup_v<ExecGroup> && Cap::has_wgmma>> {
     static constexpr bool supported = true;
     using type = axp::level2::detail::as_composition_t<
-        axp::level0::WarpgroupMma<Recipe, Shape, ADesc, BDesc, AccFrag, ADescSubj, BDescSubj, AccSubj, WgmmaSubj>,
+        axp::level1::low::WarpgroupMma<Recipe, Shape, ADesc, BDesc, AccFrag, ADescSubj, BDescSubj, AccSubj, WgmmaSubj>,
         Cap
     >;
 };
@@ -63,7 +63,7 @@ template<class Recipe, class Shape, class ATile, class BTile, class AccFrag,
 struct resolve_impl<MatmulWarpPattern<Recipe, Shape, ATile, BTile, AccFrag, ASubj, BSubj, AccSubj>, Cap> {
     static constexpr bool supported = true;
     using type = axp::level2::detail::as_composition_t<
-        axp::level0::MMA<Recipe, Shape, ATile, BTile, AccFrag, ASubj, BSubj, AccSubj>,
+        axp::level1::low::MMA<Recipe, Shape, ATile, BTile, AccFrag, ASubj, BSubj, AccSubj>,
         Cap
     >;
 };
@@ -74,7 +74,7 @@ struct resolve_impl<MatmulWarpgroupPattern<Recipe, Shape, ADesc, BDesc, AccFrag,
                     std::enable_if_t<iro::exec::is_warpgroup_v<ExecGroup> && Cap::has_wgmma>> {
     static constexpr bool supported = true;
     using type = axp::level2::detail::as_composition_t<
-        axp::level0::WarpgroupMma<Recipe, Shape, ADesc, BDesc, AccFrag, ADescSubj, BDescSubj, AccSubj, WgmmaSubj>,
+        axp::level1::low::WarpgroupMma<Recipe, Shape, ADesc, BDesc, AccFrag, ADescSubj, BDescSubj, AccSubj, WgmmaSubj>,
         Cap
     >;
 };

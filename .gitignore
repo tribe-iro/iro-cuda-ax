@@ -1,2 +1,5 @@
 /build/
 /out/
+/tools/generated/ax_manifest_tool
+/tools/__pycache__/
+/tests/kernels/generated/*/*.cu

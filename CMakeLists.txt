@@ -12,6 +12,15 @@ target_include_directories(iro_cuda_ax_headers
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
 
+option(AX_ENABLE_INTERNAL_COMPILE_TARGET "Enable internal manifest-driven instantiation compile target" OFF)
+if(AX_ENABLE_INTERNAL_COMPILE_TARGET)
+  add_custom_target(ax_internal_compile
+    COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/compile.sh
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    COMMENT "Running internal AX architecture compile validation"
+    VERBATIM)
+endif()
+
 install(TARGETS iro_cuda_ax_headers EXPORT iro_cuda_ax_targets)
 install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 

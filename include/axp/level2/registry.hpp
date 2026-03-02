@@ -10,114 +10,9 @@ namespace axp::level2::registry {
 template<class>
 inline constexpr bool always_false_v = false;
 
-// Row/softmax patterns (fragment-level)
-template<class Recipe, class Frag, class InSubj, class OutSubj, class ExecGroup>
-struct WarpSoftmaxPattern {};
-
-template<class Recipe, class Frag, class InSubj, class OutSubj, class ExecGroup>
-struct WarpSoftmaxVecPattern {};
-
-template<class Recipe, class Frag, class MaskPayload, class MaskSubj, class NegInfSubj,
-         class InSubj, class OutSubj, class ExecGroup>
-struct WarpSoftmaxMaskedPattern {};
-
-template<class Recipe, class Frag, class SmemTile, class SmemSubjMax, class SmemSubjSum,
-         class InSubj, class OutSubj, class ExecGroup>
-struct BlockSoftmaxFragPattern {};
-
-template<class Recipe, class Frag, class SmemTile, class SmemSubjMax, class SmemSubjSum,
-         class InSubj, class OutSubj, class ExecGroup>
-struct BlockSoftmaxFragVecPattern {};
-
-template<class Recipe, class Frag, class MaskPayload, class MaskSubj, class NegInfSubj,
-         class SmemTile, class SmemSubjMax, class SmemSubjSum,
-         class InSubj, class OutSubj, class ExecGroup>
-struct BlockSoftmaxFragMaskedPattern {};
-
-// Fused block softmax patterns (tile-level, optional)
-template<class Recipe, int BlockThreads, int ElementsPerThread,
-         class InTile, class OutTile, class InSubj, class OutSubj>
-struct BlockSoftmaxFusedPattern {};
-
-template<class Recipe, int BlockThreads, int ElementsPerThread, int VecBytes,
-         class InTile, class OutTile, class InSubj, class OutSubj>
-struct BlockSoftmaxVecFusedPattern {};
-
-// Norm patterns (fragment-level)
-template<class Recipe, class Frag, class GammaFrag, class BetaFrag, class EpsPayload,
-         class InSubj, class GammaSubj, class BetaSubj, class EpsSubj, class OutSubj, class ExecGroup>
-struct LayerNormFragPattern {};
-
-template<class Recipe, class Frag, class WeightFrag, class EpsPayload,
-         class InSubj, class WeightSubj, class EpsSubj, class OutSubj, class ExecGroup>
-struct RMSNormFragPattern {};
-
-// Row mean/variance patterns (fragment-level, Welford-based)
-template<class Recipe, class Frag, class InSubj, class OutSubj, class ExecGroup>
-struct RowMeanPattern {};
-
-template<class Recipe, class Frag, class InSubj, class OutSubj, class ExecGroup>
-struct RowVariancePattern {};
-
-// Fused block norm patterns (tile-level, optional)
-template<class Recipe, int BlockThreads, int ElementsPerThread,
-         class InTile, class OutTile, class GammaTile, class BetaTile,
-         class InSubj, class OutSubj, class GammaSubj, class BetaSubj>
-struct LayerNormRowFusedPattern {};
-
-template<class Recipe, int BlockThreads, int ElementsPerThread,
-         class InTile, class OutTile, class WeightTile,
-         class InSubj, class OutSubj, class WeightSubj>
-struct RMSNormRowFusedPattern {};
-
-// Welford patterns
-template<class Recipe, class Frag, class InSubj, class OutSubj, class ExecGroup>
-struct FragmentWelfordPattern {};
-
-template<class Recipe, class InSubj, class OutSubj>
-struct WarpAllReduceWelfordPattern {};
-
-// Attention softmax state patterns
-template<class Recipe, class ExecGroup, class ASubj, class BSubj, class OutSubj>
-struct SoftmaxStateCombinePattern {};
-
-template<class Recipe, class Frag, class InSubj, class OutSubj, class StateSubj, class ExecGroup>
-struct WarpSoftmaxStatePattern {};
-
-template<class Recipe, class Frag, class MaskPayload, class MaskSubj, class NegInfSubj,
-         class InSubj, class OutSubj, class StateSubj, class ExecGroup>
-struct WarpSoftmaxStateMaskedPattern {};
-
-template<class Recipe, class InSubj, class OutSubj>
-struct WarpReduceSoftmaxStatePattern {};
-
-template<class Recipe, class InSubj, class OutSubj, class ExecGroup>
-struct SoftmaxStateCopyPattern {};
-
-template<class Recipe, class TileStateSubj, class NewStateSubj, class OutSubj, class ExecGroup>
-struct SoftmaxStateScalePattern {};
-
-template<class Recipe, class AccFrag, class AccSubj, class OldStateSubj, class NewStateSubj, class ExecGroup>
-struct RescaleAccumulatorPattern {};
-
-template<class Recipe, class AccFrag, class AccSubj, class OldStateSubj, class NewStateSubj,
-         class OutStateSubj, class ExecGroup>
-struct OnlineSoftmaxUpdatePattern {};
-
 // Scale shared tile pattern (FP8 scale prelude)
 template<class Recipe, class Tile, class ScaleTile, class TileSubj, class ScaleSubj, class ExecGroup>
 struct ScaleSharedTilePattern {};
-
-// Warpgroup attention (WGMMA) patterns
-template<class Recipe, int TileM, int TileN, int HeadDim, int Stages,
-         class QSubj, class KSubj, class VSubj,
-         class AccSubj, class OldStateSubj, class OutStateSubj,
-         class MemoryPatternQ, class MemoryPatternK, class MemoryPatternV,
-         class LoadModeQ, class LoadModeK, class LoadModeV,
-         class Schedule,
-         class TileSkip = axp::intent::tile_skip::None,
-         class QTma = void, class KTma = void, class VTma = void>
-struct AttentionWgmmaPattern {};
 
 // Matmul patterns (registry chooses warp vs warpgroup)
 template<class Recipe, class Shape, class ATile, class BTile, class AccFrag,
@@ -142,14 +37,60 @@ template<class Recipe, class InTile, class OutTile, class SlotSubj, class OutSub
          class MarkExecGroup, class Lifetime, class Tma = void>
 struct StageSmemToGmemPattern {};
 
-// Epilogue/fusion patterns (vectorized)
-template<class Recipe, class Elem, class Dist, class InSubj, class BiasSubj, class OutSubj, class ExecGroup,
-         template<class, class, class, class, class, class, class> class ActOp>
-struct FusedBiasActivationVecPattern {};
+// Ordering / atomic protocol patterns
+template<class Recipe, class Subject, class EventTag, class ExecGroup,
+         class Lifetime = iro::token::lifetime::block>
+struct PublishEventPattern {};
 
-template<class Recipe, class Elem, class Dist, class AccSubj, class CSubj,
-         class AlphaSubj, class BetaSubj, class OutSubj, class ExecGroup>
-struct LinearCombinationVecPattern {};
+template<class Recipe, class Payload, class PayloadSubj, class Subject, class EventTag, class ExecGroup,
+         class Lifetime = iro::token::lifetime::block,
+         class InExtra = iro::util::type_list<>, class OutExtra = iro::util::type_list<>>
+struct EmitEventAfterPattern {};
+
+template<class Recipe, class Subject, class EventTag, class PhaseTag, class ExecGroup,
+         class Lifetime = iro::token::lifetime::block>
+struct DependOnEventPattern {};
+
+template<class Recipe, class Payload, class PayloadSubj, class Subject, class EventTag, class PhaseTag, class ExecGroup,
+         class Lifetime = iro::token::lifetime::block,
+         class InExtra = iro::util::type_list<>, class OutExtra = iro::util::type_list<>>
+struct DependOnEventGatePattern {};
+
+template<class Recipe, class Subject, class PrevEpochTag, class NextEpochTag, class ExecGroup,
+         class Lifetime = iro::token::lifetime::block>
+struct AdvanceEpochPattern {};
+
+template<class Recipe, class Subject, class ScopeT, class EventTag, class ExecGroup,
+         class OrderT = iro::memory_order::seq_cst,
+         class Lifetime = iro::token::lifetime::block>
+struct EventFromAtomicDonePattern {};
+
+template<class Recipe, class Subject, class EpochTag, class ExecGroup,
+         class Lifetime = iro::token::lifetime::block>
+struct InitEpochPattern {};
+
+template<class Recipe, class Subject, class PrevEpochTag, class NextEpochTag, class ExecGroup,
+         class Lifetime = iro::token::lifetime::block>
+struct AdvanceEpochTokenPattern {};
+
+template<class Recipe, class Subject, class EpochTag, class ExecGroup,
+         class Lifetime = iro::token::lifetime::block>
+struct RequireEpochPattern {};
+
+template<class Recipe, class Subject, class ExecGroup, class ScopeT,
+         class OrderT = iro::memory_order::seq_cst,
+         class Lifetime = iro::token::lifetime::block>
+struct MarkAtomicDonePattern {};
+
+template<class Recipe, class Subject, class ExecGroup, class ScopeT,
+         class OrderT = iro::memory_order::seq_cst,
+         class Lifetime = iro::token::lifetime::block>
+struct RequireAtomicDonePattern {};
+
+template<class Recipe, class TilePayload, class Subject, class ExecGroup, class ScopeT,
+         class OrderT = iro::memory_order::seq_cst,
+         class Lifetime = iro::token::lifetime::block>
+struct MarkAtomicDoneFromTilePattern {};
 
 // Registry plumbing
 template<class Pattern, class Cap = axp::target_cap, class = void>

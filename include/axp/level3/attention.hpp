@@ -1,15 +1,10 @@
 #pragma once
 
 #include <iro_cuda_ax_core.hpp>
-#include "../level0/compute_alias.hpp"
-#include "../level0/compute.hpp"
-#include "../level0/ownership.hpp"
-#include "../level0/convert.hpp"
-#include "../level0/sync.hpp"
-#include "../level0/stage.hpp"
+#include "../level2/passthrough.hpp"
 #include "../level2/matmul.hpp"
 #include "../level2/staging.hpp"
-#include "../level2/attention.hpp"
+#include "domain/attention.hpp"
 #include "../swizzle.hpp"
 #include "../intent.hpp"
 #include "../kits/intent.hpp"
@@ -132,7 +127,7 @@ struct AttentionTileImpl {
     using AccRecipe = iro::recipe::Accumulate<Recipe>;
     using ScalePayload = iro::contract::ScalarDesc<iro::elem::f32, iro::dist::replicated>;
     static constexpr bool kTileSkip = !std::is_same_v<TileSkip, axp::intent::tile_skip::None>;
-    using TileSkipHookOp = axp::level2::attention::TileSkipHook<Recipe, axp::subject::TileSkip, ExecGroup>;
+    using TileSkipHookOp = axp::level3::domain::attention::TileSkipHook<Recipe, axp::subject::TileSkip, ExecGroup>;
     template<bool Enable, class = void>
     struct tile_skip_hook {
         using obligations = iro::util::type_list<>;
@@ -233,13 +228,13 @@ struct AttentionTileImpl {
     using SlotK = iro::contract::res::slot_subject<PipeK, SlotIdx>;
     using SlotV = iro::contract::res::slot_subject<PipeV, SlotIdx>;
 
-    using TileInQ = axp::level0::TileBoundaryIn<
+    using TileInQ = axp::level2::low::TileBoundaryIn<
         Recipe, QTileG, QSubj, iro::exec::block, iro::token::lifetime::block
     >;
-    using TileInK = axp::level0::TileBoundaryIn<
+    using TileInK = axp::level2::low::TileBoundaryIn<
         Recipe, KTileG, KSubj, iro::exec::block, iro::token::lifetime::block
     >;
-    using TileInV = axp::level0::TileBoundaryIn<
+    using TileInV = axp::level2::low::TileBoundaryIn<
         Recipe, VTileG, VSubj, iro::exec::block, iro::token::lifetime::block
     >;
 
@@ -272,14 +267,14 @@ struct AttentionTileImpl {
     template<class Tma>
     struct barrier_init<Tma, std::enable_if_t<axp::level2::staging::tma_traits<Tma>::valid>> {
         using BarrierSubj = typename axp::level2::staging::tma_traits<Tma>::BarrierSubj;
-        using init_type = axp::level0::BarrierInit<Recipe, BarrierSubj, iro::exec::block, 1>;
+        using init_type = axp::level2::low::BarrierInit<Recipe, BarrierSubj, iro::exec::block, 1>;
         using obligations = iro::util::type_list<init_type>;
     };
 
     template<class Tma>
     struct barrier_init<Tma, std::enable_if_t<axp::level2::staging::tma_multicast_traits<Tma>::valid>> {
         using BarrierSubj = typename axp::level2::staging::tma_multicast_traits<Tma>::BarrierSubj;
-        using init_type = axp::level0::ClusterBarrierInit<Recipe, BarrierSubj, iro::exec::cluster, 1>;
+        using init_type = axp::level2::low::ClusterBarrierInit<Recipe, BarrierSubj, iro::exec::cluster, 1>;
         using obligations = iro::util::type_list<init_type>;
     };
 
@@ -322,13 +317,13 @@ struct AttentionTileImpl {
     };
 
 
-    using QKShape = axp::protocol::compute::MmaShape<
+    using QKShape = axp::level2::proto::compute::MmaShape<
         TileM, TileN, HeadDim,
         ElemA, ElemB, typename Recipe::acc,
         typename QTileS::layout, typename KTileS::layout
     >;
 
-    using PVShape = axp::protocol::compute::MmaShape<
+    using PVShape = axp::level2::proto::compute::MmaShape<
         TileM, HeadDim, TileN,
         ElemA, ElemB, typename Recipe::acc,
         typename PTileF16::layout, typename VTileS::layout
@@ -350,15 +345,15 @@ struct AttentionTileImpl {
     static constexpr int kBaseRegs = 48 + Stages * 4;
     using RegPressure = detail::reg_pressure_obligation<kBaseRegs, QKFrag, OFrag>;
 
-    struct HoldQ : axp::level0::SlotAfter<
+    struct HoldQ : axp::level2::low::SlotAfter<
         Recipe, SlotQ, iro::exec::block, iro::token::lifetime::block, QTileS::bytes,
         QKFrag, detail::qk_frag_subj, ExecGroup, typename QKFrag::dist
     > {};
-    struct HoldK : axp::level0::SlotAfter<
+    struct HoldK : axp::level2::low::SlotAfter<
         Recipe, SlotK, iro::exec::block, iro::token::lifetime::block, KTileS::bytes,
         QKFrag, detail::qk_frag_subj, ExecGroup, typename QKFrag::dist
     > {};
-    struct HoldV : axp::level0::SlotAfter<
+    struct HoldV : axp::level2::low::SlotAfter<
         Recipe, SlotV, iro::exec::block, iro::token::lifetime::block, VTileS::bytes,
         OFrag, detail::pv_frag_subj, ExecGroup, typename OFrag::dist
     > {};
@@ -416,7 +411,7 @@ struct AttentionTileImpl {
         CapT
     >;
 
-    using Softmax = axp::level2::attention::WarpSoftmaxState<
+    using Softmax = axp::level3::domain::attention::WarpSoftmaxState<
         AccRecipe,
         QKFrag,
         detail::qk_frag_subj,
@@ -426,7 +421,7 @@ struct AttentionTileImpl {
         CapT
     >;
 
-    using Combine = axp::level2::attention::SoftmaxStateCombine<
+    using Combine = axp::level3::domain::attention::SoftmaxStateCombine<
         AccRecipe,
         ExecGroup,
         OldStateSubj,
@@ -434,7 +429,7 @@ struct AttentionTileImpl {
         detail::combined_state_subj
     >;
 
-    using Rescale = axp::level2::attention::RescaleAccumulator<
+    using Rescale = axp::level3::domain::attention::RescaleAccumulator<
         AccRecipe,
         OFrag,
         AccSubj,
@@ -443,7 +438,7 @@ struct AttentionTileImpl {
         ExecGroup
     >;
 
-    using StateCopy = axp::level2::attention::SoftmaxStateCopy<
+    using StateCopy = axp::level3::domain::attention::SoftmaxStateCopy<
         AccRecipe,
         detail::combined_state_subj,
         OutStateSubj,
@@ -451,7 +446,7 @@ struct AttentionTileImpl {
         CapT
     >;
 
-    using Scale = axp::level2::attention::SoftmaxStateScale<
+    using Scale = axp::level3::domain::attention::SoftmaxStateScale<
         AccRecipe,
         detail::tile_state_subj,
         detail::combined_state_subj,
@@ -460,7 +455,7 @@ struct AttentionTileImpl {
         CapT
     >;
 
-    using ScaleFrag = axp::level0::FragmentBroadcast<
+    using ScaleFrag = axp::level2::low::FragmentBroadcast<
         AccRecipe,
         QKFrag,
         ScalePayload,
@@ -469,7 +464,7 @@ struct AttentionTileImpl {
         ExecGroup
     >;
 
-    using ScaleWeights = axp::level0::Mul<
+    using ScaleWeights = axp::level2::low::Mul<
         AccRecipe,
         QKFrag,
         detail::weights_frag_subj,
@@ -478,7 +473,7 @@ struct AttentionTileImpl {
         ExecGroup
     >;
 
-    using StoreWeights = axp::level0::FragmentToSharedTile<
+    using StoreWeights = axp::level2::low::FragmentToSharedTile<
         AccRecipe,
         QKFrag,
         PTileF32,
@@ -488,7 +483,7 @@ struct AttentionTileImpl {
         iro::token::lifetime::warp
     >;
 
-    using CastWeights = axp::level0::CastTile<
+    using CastWeights = axp::level2::low::CastTile<
         AccRecipe,
         WeightRecipe,
         PTileF32,
@@ -499,7 +494,7 @@ struct AttentionTileImpl {
         cast_vec_bytes
     >;
 
-    using PV = axp::level0::WarpMmaShared<
+    using PV = axp::level2::low::WarpMmaShared<
         Recipe,
         PVShape,
         PTileF16,
@@ -510,7 +505,7 @@ struct AttentionTileImpl {
         detail::pv_frag_subj
     >;
 
-    using Add = axp::level0::Add<
+    using Add = axp::level2::low::Add<
         AccRecipe,
         OFrag,
         AccSubj,
@@ -656,7 +651,7 @@ struct AttentionTileWgmmaImpl {
     static constexpr int kBaseRegs = 64 + Stages * 8;
     using RegPressure = detail::reg_pressure_obligation<kBaseRegs, QKFrag, OFrag>;
 
-    using Core = axp::level2::attention::AttentionWgmma<
+    using Core = axp::level3::domain::attention::AttentionWgmma<
         Recipe, TileM, TileN, HeadDim, Stages,
         QSubj, KSubj, VSubj,
         AccSubj, OldStateSubj, OutStateSubj,

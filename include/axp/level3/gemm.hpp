@@ -2,19 +2,11 @@
 
 #include <iro_cuda_ax_core.hpp>
 #include "../concepts.hpp"
-#include "../level0/compute.hpp"
-#include "../level0/convert.hpp"
-#include "../level0/memory.hpp"
-#include "../level0/ownership.hpp"
-#include "../level0/specialize.hpp"
-#include "../level0/sync.hpp"
-#include "../level0/stage.hpp"
 #include "../level2/matmul.hpp"
-#include "../level2/epilogue.hpp"
+#include "../level2/passthrough.hpp"
 #include "../level2/staging.hpp"
 #include "../level2/scale.hpp"
 #include "../level2/wgmma.hpp"
-#include "../level0/fragment.hpp"
 #include "../swizzle.hpp"
 #include "../intent.hpp"
 #include "../kits/intent.hpp"
@@ -106,7 +98,7 @@ struct scale_tile {
 
 template<class Elem, int Vec>
 struct scale_tile<true, Elem, Vec> {
-    using type = axp::protocol::scale::ScaleTile<Elem, Vec>;
+    using type = axp::level2::proto::scale::ScaleTile<Elem, Vec>;
 };
 
 template<bool Enable, class Recipe, class Tile, class ScaleTile, class TileSubj, class ScaleSubj, class CapT>
@@ -170,16 +162,60 @@ struct None {
     static constexpr bool enabled = false;
 };
 
+template<class Recipe, class Elem, class Dist, class InSubj, class BiasSubj, class OutSubj, class ExecGroup,
+         template<class, class, class, class, class, class, class> class ActOp,
+         class CapT = axp::target_cap>
+struct FusedBiasActivationVecImpl {
+    using VecPayload = typename axp::level3::gemm::detail::vec_payload_selector<Recipe, Elem, Dist>::type;
+    struct tmp_tag { static constexpr auto id = iro::util::fnv1a_64_cstr("axp.level3.gemm.epilogue.bias_act.tmp"); };
+    using tmp_subj = iro::contract::subject::indexed<tmp_tag, 0>;
+    using Add = axp::level2::low::Add<Recipe, VecPayload, InSubj, BiasSubj, tmp_subj, ExecGroup>;
+    using Act = ActOp<Recipe, VecPayload, tmp_subj, OutSubj, ExecGroup, iro::util::type_list<>, iro::util::type_list<>>;
+    using obligations = iro::util::type_list<Add, Act>;
+    using edges = iro::util::type_list<
+        iro::compose::Edge<
+            axp::level3::gemm::detail::out_port_t<Add, 0>,
+            axp::level3::gemm::detail::in_port_t<Act, 0>
+        >
+    >;
+    using type = axp::level3::detail::make_composition_t<obligations, edges, iro::profile::BudgetMax, CapT>;
+};
+
+template<class Recipe, class Elem, class Dist, class AccSubj, class CSubj,
+         class AlphaSubj, class BetaSubj, class OutSubj, class ExecGroup,
+         class CapT = axp::target_cap>
+struct LinearCombinationVecImpl {
+    using VecPayload = typename axp::level3::gemm::detail::vec_payload_selector<Recipe, Elem, Dist>::type;
+    struct acc_scaled_tag { static constexpr auto id = iro::util::fnv1a_64_cstr("axp.level3.gemm.epilogue.acc_scaled"); };
+    struct c_scaled_tag { static constexpr auto id = iro::util::fnv1a_64_cstr("axp.level3.gemm.epilogue.c_scaled"); };
+    using acc_scaled_subj = iro::contract::subject::indexed<acc_scaled_tag, 0>;
+    using c_scaled_subj = iro::contract::subject::indexed<c_scaled_tag, 0>;
+    using MulAcc = axp::level2::low::Mul<Recipe, VecPayload, AccSubj, AlphaSubj, acc_scaled_subj, ExecGroup>;
+    using MulC = axp::level2::low::Mul<Recipe, VecPayload, CSubj, BetaSubj, c_scaled_subj, ExecGroup>;
+    using Add = axp::level2::low::Add<Recipe, VecPayload, acc_scaled_subj, c_scaled_subj, OutSubj, ExecGroup>;
+    using obligations = iro::util::type_list<MulAcc, MulC, Add>;
+    using edges = iro::util::type_list<
+        iro::compose::Edge<
+            axp::level3::gemm::detail::out_port_t<MulAcc, 0>,
+            axp::level3::gemm::detail::in_port_t<Add, 0>
+        >,
+        iro::compose::Edge<
+            axp::level3::gemm::detail::out_port_t<MulC, 0>,
+            axp::level3::gemm::detail::in_port_t<Add, 1>
+        >
+    >;
+    using type = axp::level3::detail::make_composition_t<obligations, edges, iro::profile::BudgetMax, CapT>;
+};
+
 template<class BiasTag, template<class, class, class, class, class, class, class> class ActOp>
 struct BiasActivationVec {
     static constexpr bool enabled = true;
     using bias_tag = BiasTag;
     template<class Recipe, class VecPayload, class InSubj, class BiasSubj, class OutSubj, class ExecGroup,
              class CapT = axp::target_cap>
-    using op = axp::level2::epilogue::FusedBiasActivationVec<
-        Recipe, typename VecPayload::elem, typename VecPayload::dist,
-        InSubj, BiasSubj, OutSubj, ExecGroup, ActOp, CapT
-    >;
+    using op = typename FusedBiasActivationVecImpl<
+        Recipe, typename VecPayload::elem, typename VecPayload::dist, InSubj, BiasSubj, OutSubj, ExecGroup, ActOp, CapT
+    >::type;
 };
 
 template<class CTag, class AlphaTag, class BetaTag>
@@ -191,10 +227,10 @@ struct LinearCombinationVec {
     template<class Recipe, class VecPayload, class AccSubj, class CSubj,
              class AlphaSubj, class BetaSubj, class OutSubj, class ExecGroup,
              class CapT = axp::target_cap>
-    using op = axp::level2::epilogue::LinearCombinationVec<
+    using op = typename LinearCombinationVecImpl<
         Recipe, typename VecPayload::elem, typename VecPayload::dist,
         AccSubj, CSubj, AlphaSubj, BetaSubj, OutSubj, ExecGroup, CapT
-    >;
+    >::type;
 };
 
 } // namespace epilogue
@@ -231,11 +267,11 @@ struct build_vec_epilogue<Recipe, Frag, ExecGroup, epilogue::BiasActivationVec<B
         using VecOutSubj = epi_vec_out_subj<I>;
         using BiasSubj = iro::contract::subject::indexed<BiasTag, I>;
 
-        struct Load : axp::level0::FragmentToVectorSlice<
+        struct Load : axp::level2::low::FragmentToVectorSlice<
             Recipe, Frag, VecPayload, InFragSubj, VecInSubj, ExecGroup, kOffset> {};
         struct Epi : epilogue::BiasActivationVec<BiasTag, ActOp>::template op<
             Recipe, VecPayload, VecInSubj, BiasSubj, VecOutSubj, ExecGroup, CapT> {};
-        struct Store : axp::level0::VectorSliceToFragment<
+        struct Store : axp::level2::low::VectorSliceToFragment<
             Recipe, Frag, VecPayload, InFragSubj, VecOutSubj, epi_frag_subj<I>, ExecGroup, kOffset> {};
 
         using curr_obligations = iro::util::type_list<Load, Epi, Store>;
@@ -290,11 +326,11 @@ struct build_vec_epilogue<Recipe, Frag, ExecGroup, epilogue::LinearCombinationVe
         using AlphaSubj = iro::contract::subject::indexed<AlphaTag, I>;
         using BetaSubj = iro::contract::subject::indexed<BetaTag, I>;
 
-        struct Load : axp::level0::FragmentToVectorSlice<
+        struct Load : axp::level2::low::FragmentToVectorSlice<
             Recipe, Frag, VecPayload, InFragSubj, VecInSubj, ExecGroup, kOffset> {};
         struct Epi : epilogue::LinearCombinationVec<CTag, AlphaTag, BetaTag>::template op<
             Recipe, VecPayload, VecInSubj, CSubj, AlphaSubj, BetaSubj, VecOutSubj, ExecGroup, CapT> {};
-        struct Store : axp::level0::VectorSliceToFragment<
+        struct Store : axp::level2::low::VectorSliceToFragment<
             Recipe, Frag, VecPayload, InFragSubj, VecOutSubj, epi_frag_subj<I>, ExecGroup, kOffset> {};
 
         using curr_obligations = iro::util::type_list<Load, Epi, Store>;
@@ -373,13 +409,13 @@ struct GemmTileWarpImpl {
     template<class Op>
     using ProducerOp = std::conditional_t<
         kProducerConsumer,
-        axp::level0::SpecializedOp<axp::level0::role::producer, Op>,
+        axp::level2::low::SpecializedOp<axp::level2::low::role::producer, Op>,
         Op
     >;
     template<class Op>
     using ConsumerOp = std::conditional_t<
         kProducerConsumer,
-        axp::level0::SpecializedOp<axp::level0::role::consumer, Op>,
+        axp::level2::low::SpecializedOp<axp::level2::low::role::consumer, Op>,
         Op
     >;
     template<class Op>
@@ -388,7 +424,7 @@ struct GemmTileWarpImpl {
         ConsumerOp<Op>,
         Op
     >;
-    using ScheduleReq = axp::level0::RequireWarpgroupCount<2, CapT::warpgroup_warps>;
+    using ScheduleReq = axp::level2::low::RequireWarpgroupCount<2, CapT::warpgroup_warps>;
     using ScheduleObligations = std::conditional_t<
         kProducerConsumer,
         iro::util::type_list<ScheduleReq>,
@@ -460,20 +496,20 @@ struct GemmTileWarpImpl {
         iro::contract::Align<16>
     >;
 
-    using TileInA = axp::level0::TileBoundaryIn<
+    using TileInA = axp::level2::low::TileBoundaryIn<
         Recipe, ATileG, ASubj, iro::exec::block, iro::token::lifetime::block
     >;
-    using TileInB = axp::level0::TileBoundaryIn<
+    using TileInB = axp::level2::low::TileBoundaryIn<
         Recipe, BTileG, BSubj, iro::exec::block, iro::token::lifetime::block
     >;
-    using TileOut = axp::level0::TileBoundaryOut<
+    using TileOut = axp::level2::low::TileBoundaryOut<
         Recipe, CTileS, CSubj, iro::exec::block, iro::token::lifetime::block
     >;
 
-    using MmaShape = axp::protocol::compute::MmaShape<BlockM, BlockN, BlockK, ElemA, ElemB, typename Recipe::acc,
+    using MmaShape = axp::level2::proto::compute::MmaShape<BlockM, BlockN, BlockK, ElemA, ElemB, typename Recipe::acc,
                                                      typename ATileS::layout, typename BTileS::layout>;
 
-    static_assert(axp::protocol::compute::detail::is_wmma_shape_v<BlockM, BlockN, BlockK, ElemA, ElemB, typename Recipe::acc>,
+    static_assert(axp::level2::proto::compute::detail::is_wmma_shape_v<BlockM, BlockN, BlockK, ElemA, ElemB, typename Recipe::acc>,
                   "GemmTile: WMMA shape only (16x16x16 f16/bf16 or 16x16x8 tf32)");
 
     using AccFrag = iro::contract::FragmentDesc<
@@ -503,14 +539,14 @@ struct GemmTileWarpImpl {
     template<class Tma>
     struct barrier_init<Tma, std::enable_if_t<axp::level2::staging::tma_traits<Tma>::valid>> {
         using BarrierSubj = typename axp::level2::staging::tma_traits<Tma>::BarrierSubj;
-        using init_type = axp::level0::BarrierInit<Recipe, BarrierSubj, iro::exec::block, 1>;
+        using init_type = axp::level2::low::BarrierInit<Recipe, BarrierSubj, iro::exec::block, 1>;
         using obligations = iro::util::type_list<init_type>;
     };
 
     template<class Tma>
     struct barrier_init<Tma, std::enable_if_t<axp::level2::staging::tma_multicast_traits<Tma>::valid>> {
         using BarrierSubj = typename axp::level2::staging::tma_multicast_traits<Tma>::BarrierSubj;
-        using init_type = axp::level0::ClusterBarrierInit<Recipe, BarrierSubj, iro::exec::cluster, 1>;
+        using init_type = axp::level2::low::ClusterBarrierInit<Recipe, BarrierSubj, iro::exec::cluster, 1>;
         using obligations = iro::util::type_list<init_type>;
     };
 
@@ -611,11 +647,11 @@ struct GemmTileWarpImpl {
         using MarkB = ConsumerOp<MarkBImpl>;
         using ReleaseA = ConsumerOp<ReleaseAImpl>;
         using ReleaseB = ConsumerOp<ReleaseBImpl>;
-        struct HoldA : axp::level0::SlotAfter<
+        struct HoldA : axp::level2::low::SlotAfter<
             Recipe, SlotA, iro::exec::block, iro::token::lifetime::block, ATileS::bytes,
             AccFrag, detail::acc_raw_subj<I>, ExecGroup, typename AccFrag::dist
         > {};
-        struct HoldB : axp::level0::SlotAfter<
+        struct HoldB : axp::level2::low::SlotAfter<
             Recipe, SlotB, iro::exec::block, iro::token::lifetime::block, BTileS::bytes,
             AccFrag, detail::acc_raw_subj<I>, ExecGroup, typename AccFrag::dist
         > {};
@@ -671,7 +707,7 @@ struct GemmTileWarpImpl {
             detail::acc_accum_subj<I - 1>
         >;
 
-        struct AddImpl : axp::level0::Add<
+        struct AddImpl : axp::level2::low::Add<
             AccRecipe, AccFrag, PrevAccum, detail::acc_raw_subj<I>, detail::acc_accum_subj<I>, ExecGroup
         > {};
         using Add = ConsumerOp<AddImpl>;
@@ -684,11 +720,11 @@ struct GemmTileWarpImpl {
         using MarkB = ConsumerOp<MarkBImpl>;
         using ReleaseA = ConsumerOp<ReleaseAImpl>;
         using ReleaseB = ConsumerOp<ReleaseBImpl>;
-        struct HoldA : axp::level0::SlotAfter<
+        struct HoldA : axp::level2::low::SlotAfter<
             Recipe, SlotA, iro::exec::block, iro::token::lifetime::block, ATileS::bytes,
             AccFrag, detail::acc_raw_subj<I>, ExecGroup, typename AccFrag::dist
         > {};
-        struct HoldB : axp::level0::SlotAfter<
+        struct HoldB : axp::level2::low::SlotAfter<
             Recipe, SlotB, iro::exec::block, iro::token::lifetime::block, BTileS::bytes,
             AccFrag, detail::acc_raw_subj<I>, ExecGroup, typename AccFrag::dist
         > {};
@@ -937,11 +973,11 @@ struct GemmTileWarpImpl {
     using EpilogueAccum = typename EpilogueBuild::out_frag_subj;
     using EpilogueProducer = typename EpilogueBuild::out_frag_producer;
 
-    using Store = axp::level0::FragmentToSharedTile<
+    using Store = axp::level2::low::FragmentToSharedTile<
         Recipe, AccFrag, CTileS, EpilogueAccum, CSubj, iro::exec::warp, iro::token::lifetime::warp
     >;
 
-    using Fence = axp::level0::TileFence<
+    using Fence = axp::level2::low::TileFence<
         Recipe, CTileS, CSubj, iro::exec::block
     >;
 
@@ -1076,13 +1112,13 @@ struct GemmTileWgmmaImpl {
     template<class Op>
     using ProducerOp = std::conditional_t<
         kProducerConsumer,
-        axp::level0::SpecializedOp<axp::level0::role::producer, Op>,
+        axp::level2::low::SpecializedOp<axp::level2::low::role::producer, Op>,
         Op
     >;
     template<class Op>
     using ConsumerOp = std::conditional_t<
         kProducerConsumer,
-        axp::level0::SpecializedOp<axp::level0::role::consumer, Op>,
+        axp::level2::low::SpecializedOp<axp::level2::low::role::consumer, Op>,
         Op
     >;
     template<class Op>
@@ -1091,7 +1127,7 @@ struct GemmTileWgmmaImpl {
         ConsumerOp<Op>,
         Op
     >;
-    using ScheduleReq = axp::level0::RequireWarpgroupCount<2, CapT::warpgroup_warps>;
+    using ScheduleReq = axp::level2::low::RequireWarpgroupCount<2, CapT::warpgroup_warps>;
     using ScheduleObligations = std::conditional_t<
         kProducerConsumer,
         iro::util::type_list<ScheduleReq>,
@@ -1181,17 +1217,17 @@ struct GemmTileWgmmaImpl {
         iro::contract::Align<16>
     >;
 
-    using TileInA = axp::level0::TileBoundaryIn<
+    using TileInA = axp::level2::low::TileBoundaryIn<
         Recipe, ATileG, ASubj, iro::exec::block, iro::token::lifetime::block
     >;
-    using TileInB = axp::level0::TileBoundaryIn<
+    using TileInB = axp::level2::low::TileBoundaryIn<
         Recipe, BTileG, BSubj, iro::exec::block, iro::token::lifetime::block
     >;
-    using TileOut = axp::level0::TileBoundaryOut<
+    using TileOut = axp::level2::low::TileBoundaryOut<
         Recipe, CTileS, CSubj, iro::exec::block, iro::token::lifetime::block
     >;
 
-    using MmaShape = axp::protocol::compute::MmaShape<BlockM, BlockN, BlockK, ElemA, ElemB, typename Recipe::acc,
+    using MmaShape = axp::level2::proto::compute::MmaShape<BlockM, BlockN, BlockK, ElemA, ElemB, typename Recipe::acc,
                                                      typename ATileS::layout, typename BTileS::layout>;
 
     using AccFrag = iro::contract::FragmentDesc<
@@ -1216,14 +1252,14 @@ struct GemmTileWgmmaImpl {
     template<class Tma>
     struct barrier_init<Tma, std::enable_if_t<axp::level2::staging::tma_traits<Tma>::valid>> {
         using BarrierSubj = typename axp::level2::staging::tma_traits<Tma>::BarrierSubj;
-        using init_type = axp::level0::BarrierInit<Recipe, BarrierSubj, iro::exec::block, 1>;
+        using init_type = axp::level2::low::BarrierInit<Recipe, BarrierSubj, iro::exec::block, 1>;
         using obligations = iro::util::type_list<init_type>;
     };
 
     template<class Tma>
     struct barrier_init<Tma, std::enable_if_t<axp::level2::staging::tma_multicast_traits<Tma>::valid>> {
         using BarrierSubj = typename axp::level2::staging::tma_multicast_traits<Tma>::BarrierSubj;
-        using init_type = axp::level0::ClusterBarrierInit<Recipe, BarrierSubj, iro::exec::cluster, 1>;
+        using init_type = axp::level2::low::ClusterBarrierInit<Recipe, BarrierSubj, iro::exec::cluster, 1>;
         using obligations = iro::util::type_list<init_type>;
     };
 
@@ -1259,7 +1295,7 @@ struct GemmTileWgmmaImpl {
     template<int Max, int I>
     struct wgmma_commit_extra<Max, I, std::enable_if_t<(I < Max)>> {
         using type = iro::util::concat_t<
-            iro::util::type_list<axp::protocol::compute::wgmma_committed<WgmmaSubj, I>>,
+            iro::util::type_list<axp::level2::proto::compute::wgmma_committed<WgmmaSubj, I>>,
             typename wgmma_commit_extra<Max, I + 1>::type
         >;
     };
@@ -1309,10 +1345,10 @@ struct GemmTileWgmmaImpl {
         using SlotA = typename slot_traits<I>::SlotA;
         using SlotB = typename slot_traits<I>::SlotB;
 
-        struct MakeDescAImpl : axp::level0::MakeDesc<
+        struct MakeDescAImpl : axp::level2::low::MakeDesc<
             Recipe, ATileS, SlotA, detail::desc_a_subj<I>, ExecGroup, iro::token::lifetime::block, WgmmaSwizzleA
         > {};
-        struct MakeDescBImpl : axp::level0::MakeDesc<
+        struct MakeDescBImpl : axp::level2::low::MakeDesc<
             Recipe, BTileS, SlotB, detail::desc_b_subj<I>, ExecGroup, iro::token::lifetime::block, WgmmaSwizzleB
         > {};
         using MakeDescA = ConsumerOp<MakeDescAImpl>;
@@ -1337,18 +1373,18 @@ struct GemmTileWgmmaImpl {
         static constexpr int slot = slot_traits<I>::slot;
         using DescSubjA = detail::desc_a_subj<slot>;
         using DescSubjB = detail::desc_b_subj<slot>;
-        using ADesc = axp::level0::WgmmaSmemDesc<ATileS, SlotA, WgmmaSwizzleA>;
-        using BDesc = axp::level0::WgmmaSmemDesc<BTileS, SlotB, WgmmaSwizzleB>;
+        using ADesc = axp::level2::low::WgmmaSmemDesc<ATileS, SlotA, WgmmaSwizzleA>;
+        using BDesc = axp::level2::low::WgmmaSmemDesc<BTileS, SlotB, WgmmaSwizzleB>;
 
         using ScaleAHelper = detail::scale_op<kHasScaleA, Recipe, ATileS, ScaleTileA, SlotA, ScaleASubj, CapT>;
         using ScaleBHelper = detail::scale_op<kHasScaleB, Recipe, BTileS, ScaleTileB, SlotB, ScaleBSubj, CapT>;
         using ScaleA = typename ScaleAHelper::type;
         using ScaleB = typename ScaleBHelper::type;
 
-        struct DescAImpl : axp::level0::UseWgmmaSmemDesc<
+        struct DescAImpl : axp::level2::low::UseWgmmaSmemDesc<
             Recipe, ATileS, SlotA, DescSubjA, ExecGroup, iro::token::lifetime::block, WgmmaSwizzleA
         > {};
-        struct DescBImpl : axp::level0::UseWgmmaSmemDesc<
+        struct DescBImpl : axp::level2::low::UseWgmmaSmemDesc<
             Recipe, BTileS, SlotB, DescSubjB, ExecGroup, iro::token::lifetime::block, WgmmaSwizzleB
         > {};
         using DescA = ConsumerOp<DescAImpl>;
@@ -1416,11 +1452,11 @@ struct GemmTileWgmmaImpl {
         using MarkB = ConsumerOp<MarkBImpl>;
         using ReleaseA = ConsumerOp<ReleaseAImpl>;
         using ReleaseB = ConsumerOp<ReleaseBImpl>;
-        struct HoldA : axp::level0::SlotAfter<
+        struct HoldA : axp::level2::low::SlotAfter<
             Recipe, SlotA, iro::exec::block, iro::token::lifetime::block, ATileS::bytes,
             AccFrag, detail::acc_wait_subj<I>, ExecGroup, typename AccFrag::dist
         > {};
-        struct HoldB : axp::level0::SlotAfter<
+        struct HoldB : axp::level2::low::SlotAfter<
             Recipe, SlotB, iro::exec::block, iro::token::lifetime::block, BTileS::bytes,
             AccFrag, detail::acc_wait_subj<I>, ExecGroup, typename AccFrag::dist
         > {};
@@ -1473,7 +1509,7 @@ struct GemmTileWgmmaImpl {
             detail::acc_accum_subj<I - 1>
         >;
 
-        struct AddImpl : axp::level0::Add<
+        struct AddImpl : axp::level2::low::Add<
             AccRecipe, AccFrag, PrevAccum, detail::acc_wait_subj<I>, detail::acc_accum_subj<I>, ExecGroup
         > {};
         using Add = ConsumerOp<AddImpl>;
@@ -1486,11 +1522,11 @@ struct GemmTileWgmmaImpl {
         using MarkB = ConsumerOp<MarkBImpl>;
         using ReleaseA = ConsumerOp<ReleaseAImpl>;
         using ReleaseB = ConsumerOp<ReleaseBImpl>;
-        struct HoldA : axp::level0::SlotAfter<
+        struct HoldA : axp::level2::low::SlotAfter<
             Recipe, SlotA, iro::exec::block, iro::token::lifetime::block, ATileS::bytes,
             AccFrag, detail::acc_wait_subj<I>, ExecGroup, typename AccFrag::dist
         > {};
-        struct HoldB : axp::level0::SlotAfter<
+        struct HoldB : axp::level2::low::SlotAfter<
             Recipe, SlotB, iro::exec::block, iro::token::lifetime::block, BTileS::bytes,
             AccFrag, detail::acc_wait_subj<I>, ExecGroup, typename AccFrag::dist
         > {};
@@ -1873,11 +1909,11 @@ struct GemmTileWgmmaImpl {
     using EpilogueAccum = typename EpilogueBuild::out_frag_subj;
     using EpilogueProducer = typename EpilogueBuild::out_frag_producer;
 
-    using Store = axp::level0::FragmentToSharedTile<
+    using Store = axp::level2::low::FragmentToSharedTile<
         Recipe, AccFrag, CTileS, EpilogueAccum, CSubj, ExecGroup, iro::token::lifetime::warpgroup
     >;
 
-    using Fence = axp::level0::TileFence<
+    using Fence = axp::level2::low::TileFence<
         Recipe, CTileS, CSubj, iro::exec::block
     >;
 
@@ -2245,7 +2281,7 @@ struct resolve_impl<GemmTilePattern<Recipe, BlockM, BlockN, BlockK, Stages, KTil
                     std::enable_if_t<!Cap::has_wgmma && std::is_same_v<typename Recipe::acc, iro::elem::f32>>> {
     static constexpr bool supported = true;
     static constexpr bool kWmmaMacroShape =
-        axp::protocol::compute::detail::is_wmma_shape_v<
+        axp::level2::proto::compute::detail::is_wmma_shape_v<
             BlockM, BlockN, BlockK,
             iro::verify::recipe_in_a_t<Recipe>,
             iro::verify::recipe_in_b_t<Recipe>,
@@ -2274,7 +2310,7 @@ struct resolve_impl<GemmTilePattern<Recipe, BlockM, BlockN, BlockK, Stages, KTil
                     std::enable_if_t<Cap::has_wgmma && std::is_same_v<typename Recipe::acc, iro::elem::f32>>> {
     static constexpr bool supported = true;
     static constexpr bool kWmmaMacroShape =
-        axp::protocol::compute::detail::is_wmma_shape_v<
+        axp::level2::proto::compute::detail::is_wmma_shape_v<
             BlockM, BlockN, BlockK,
             iro::verify::recipe_in_a_t<Recipe>,
             iro::verify::recipe_in_b_t<Recipe>,

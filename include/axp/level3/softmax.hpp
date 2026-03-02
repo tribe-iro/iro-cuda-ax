@@ -1,9 +1,8 @@
 #pragma once
 
 #include <iro_cuda_ax_core.hpp>
-#include "../level0/ownership.hpp"
-#include "../level0/memory.hpp"
-#include "../level2/row.hpp"
+#include "../level2/passthrough.hpp"
+#include "domain/row.hpp"
 #include "detail/compose.hpp"
 #include "detail/reg_pressure.hpp"
 #include "registry.hpp"
@@ -54,19 +53,19 @@ struct SoftmaxRowTileImpl {
         iro::contract::Align<16>
     >;
 
-    using TileIn = axp::level0::TileBoundaryIn<
+    using TileIn = axp::level2::low::TileBoundaryIn<
         Recipe, InTile, InSubj, ExecGroup, iro::token::lifetime::block
     >;
 
-    using TileOut = axp::level0::TileBoundaryOut<
+    using TileOut = axp::level2::low::TileBoundaryOut<
         Recipe, OutTile, OutSubj, iro::exec::block, iro::token::lifetime::block
     >;
 
-    using Load = axp::level0::SharedTileToFragment<
+    using Load = axp::level2::low::SharedTileToFragment<
         Recipe, InTile, Frag, InSubj, detail::softmax_in_frag_subj, ExecGroup, iro::token::lifetime::block
     >;
 
-    using Softmax = axp::level2::WarpSoftmax<
+    using Softmax = axp::level3::domain::WarpSoftmax<
         Recipe, Frag, detail::softmax_in_frag_subj, detail::softmax_out_frag_subj, ExecGroup, CapT
     >;
 
@@ -78,7 +77,7 @@ struct SoftmaxRowTileImpl {
         typename Recipe::math
     >;
 
-    using Store = axp::level0::FragmentToSharedTile<
+    using Store = axp::level2::low::FragmentToSharedTile<
         StoreRecipe,
         Frag,
         OutTile,
@@ -88,7 +87,7 @@ struct SoftmaxRowTileImpl {
         iro::token::lifetime::warp
     >;
 
-    using Fence = axp::level0::TileFence<
+    using Fence = axp::level2::low::TileFence<
         Recipe,
         OutTile,
         OutSubj,

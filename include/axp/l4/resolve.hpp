@@ -9,11 +9,22 @@
 #include "../graph/hash.hpp"
 #include "../l4.hpp"
 
+#include "lowering.hpp"
 #include "bind_key.hpp"
 #include "manifest_enable.hpp"
 #include "graph_registry_index.hpp"
 
 namespace axp::l4 {
+
+namespace detail {
+
+template<class Pattern, class = void>
+struct has_lowering : std::false_type {};
+
+template<class Pattern>
+struct has_lowering<Pattern, std::void_t<axp::l4::lowering::to_l3_pattern_t<Pattern>>> : std::true_type {};
+
+} // namespace detail
 
 template<class G, class Cap = axp::target_cap, class ProfileT = axp::l4::profile::proof_full>
 struct resolve {
@@ -30,7 +41,12 @@ struct resolve {
     static_assert(axp::l4::manifest_enable::enabled_v<typename registry_entry::pattern, Cap>,
                   "axp::l4::resolve: pattern/capability pair is not manifest-enabled");
 
-    using pattern = typename registry_entry::pattern;
+    using l4_pattern = typename registry_entry::pattern;
+    static_assert(axp::l4::lowering::is_canonical_preset_pattern_v<l4_pattern>,
+                  "axp::l4::resolve: registry pattern must be canonical axp::l4::preset::*");
+    static_assert(detail::has_lowering<l4_pattern>::value,
+                  "axp::l4::resolve: missing L4->L3 lowering specialization for registry pattern");
+    using pattern = axp::l4::lowering::to_l3_pattern_t<l4_pattern>;
     using graph = axp::level3::registry::Select<pattern, Cap>;
     static constexpr iro::util::u64 realization_key = registry_entry::realization_key;
     static constexpr iro::util::u64 bind_key =

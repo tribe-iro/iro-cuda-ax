@@ -1,5 +1,5 @@
 // Generated file. DO NOT EDIT.
-// Regenerate with: tools/gen_registry_index.py
+// Regenerate with: tools/ax_manifest_tool.cpp
 
 #pragma once
 
@@ -27,6 +27,9 @@ inline constexpr iro::util::u64 softmax_row4 = 0xb704344dd328af0fULL;
 inline constexpr iro::util::u64 histogram_256 = 0xc30ae660583a0c50ULL;
 inline constexpr iro::util::u64 gemm_16x16x16 = 0xc3f2b8930d5ffd1cULL;
 inline constexpr iro::util::u64 fa2_decode_attention_64x64_hd128 = 0xc95bfaa16a0a3918ULL;
+inline constexpr iro::util::u64 z_streaming_microbatch_1024 = 0xd14f1f2a9b45c301ULL;
+inline constexpr iro::util::u64 z_scientific_sparse_segmented_1024 = 0xe25a7c11ab9346d2ULL;
+inline constexpr iro::util::u64 z_scientific_swizzle_16x16 = 0xf3bc9de2046a5187ULL;
 
 } // namespace axp::l4::graph_registry::hashes
 
@@ -54,8 +57,11 @@ template<> struct axp::l4::manifest::tie_break_key<axp::l4::preset::Gemm64x64x16
 template<> struct axp::l4::manifest::tie_break_key<axp::l4::preset::Histogram256> { static constexpr auto value = iro::util::fnv1a_64_cstr("preset.histogram.256"); };
 template<> struct axp::l4::manifest::tie_break_key<axp::l4::preset::LayerNorm16x16> { static constexpr auto value = iro::util::fnv1a_64_cstr("preset.layernorm.16x16"); };
 template<> struct axp::l4::manifest::tie_break_key<axp::l4::preset::RMSNorm16x16> { static constexpr auto value = iro::util::fnv1a_64_cstr("preset.rmsnorm.16x16"); };
+template<> struct axp::l4::manifest::tie_break_key<axp::l4::preset::ScientificSparseSegmented1024> { static constexpr auto value = iro::util::fnv1a_64_cstr("preset.scientific.sparse.1024.seg8"); };
+template<> struct axp::l4::manifest::tie_break_key<axp::l4::preset::ScientificSwizzle16x16> { static constexpr auto value = iro::util::fnv1a_64_cstr("preset.scientific.swizzle.16x16"); };
 template<> struct axp::l4::manifest::tie_break_key<axp::l4::preset::SoftmaxRow4> { static constexpr auto value = iro::util::fnv1a_64_cstr("preset.softmax.row4"); };
 template<> struct axp::l4::manifest::tie_break_key<axp::l4::preset::Sort16> { static constexpr auto value = iro::util::fnv1a_64_cstr("preset.sort.16"); };
+template<> struct axp::l4::manifest::tie_break_key<axp::l4::preset::StreamingMicrobatch1024> { static constexpr auto value = iro::util::fnv1a_64_cstr("preset.streaming.microbatch.1024"); };
 template<> struct axp::l4::manifest::tie_break_key<axp::l4::preset::VectorizedElementwise16x16> { static constexpr auto value = iro::util::fnv1a_64_cstr("preset.elementwise.vec.16x16"); };
 
 #if defined(AXP_ENABLE_SM89)
@@ -121,6 +127,24 @@ template<> struct axp::l4::manifest::enabled<axp::l4::preset::Gemm16x16x16, iro:
 #if defined(AXP_ENABLE_SM90)
 template<> struct axp::l4::manifest::enabled<axp::l4::preset::Attention64x64x128Decode, iro::cap::sm90> : std::true_type {};
 #endif
+#if defined(AXP_ENABLE_SM89)
+template<> struct axp::l4::manifest::enabled<axp::l4::preset::StreamingMicrobatch1024, iro::cap::sm89> : std::true_type {};
+#endif
+#if defined(AXP_ENABLE_SM90)
+template<> struct axp::l4::manifest::enabled<axp::l4::preset::StreamingMicrobatch1024, iro::cap::sm90> : std::true_type {};
+#endif
+#if defined(AXP_ENABLE_SM89)
+template<> struct axp::l4::manifest::enabled<axp::l4::preset::ScientificSparseSegmented1024, iro::cap::sm89> : std::true_type {};
+#endif
+#if defined(AXP_ENABLE_SM90)
+template<> struct axp::l4::manifest::enabled<axp::l4::preset::ScientificSparseSegmented1024, iro::cap::sm90> : std::true_type {};
+#endif
+#if defined(AXP_ENABLE_SM89)
+template<> struct axp::l4::manifest::enabled<axp::l4::preset::ScientificSwizzle16x16, iro::cap::sm89> : std::true_type {};
+#endif
+#if defined(AXP_ENABLE_SM90)
+template<> struct axp::l4::manifest::enabled<axp::l4::preset::ScientificSwizzle16x16, iro::cap::sm90> : std::true_type {};
+#endif
 
 #define AXP_GRAPH_ENTRY(GRAPH_HASH, ENTRY, CAP, PROFILE)                                      \
 template<>                                                                                    \
@@ -131,9 +155,10 @@ struct axp::l4::graph_registry::entry<GRAPH_HASH, CAP, PROFILE> {               
         axp::l4::manifest::tie_break_key<pattern>::value;                                     \
 }
 
-#define AXP_GRAPH_HASH_OVERRIDE(GRAPH_HASH, ENTRY, CAP)                                       \
-template<>                                                                                    \
-struct axp::graph::graph_hash_override<axp::level3::registry::Select<ENTRY, CAP>> {         \
+#define AXP_GRAPH_HASH_OVERRIDE(GRAPH_HASH, ENTRY, CAP)                                                   \
+template<>                                                                                                \
+struct axp::graph::graph_hash_override<                                                           \
+    axp::level3::registry::Select<axp::l4::lowering::to_l3_pattern_t<ENTRY>, CAP>> {            \
     static constexpr bool enabled = true;                                                     \
     static constexpr iro::util::u64 value = GRAPH_HASH;                                       \
 }
@@ -259,6 +284,30 @@ AXP_GRAPH_ENTRY(axp::l4::graph_registry::hashes::fa2_decode_attention_64x64_hd12
 #endif
 
 #if defined(AXP_ENABLE_SM89)
+AXP_GRAPH_ENTRY(axp::l4::graph_registry::hashes::z_streaming_microbatch_1024, axp::l4::preset::StreamingMicrobatch1024, iro::cap::sm89, axp::l4::profile::proof_full);
+#endif
+
+#if defined(AXP_ENABLE_SM90)
+AXP_GRAPH_ENTRY(axp::l4::graph_registry::hashes::z_streaming_microbatch_1024, axp::l4::preset::StreamingMicrobatch1024, iro::cap::sm90, axp::l4::profile::proof_full);
+#endif
+
+#if defined(AXP_ENABLE_SM89)
+AXP_GRAPH_ENTRY(axp::l4::graph_registry::hashes::z_scientific_sparse_segmented_1024, axp::l4::preset::ScientificSparseSegmented1024, iro::cap::sm89, axp::l4::profile::proof_full);
+#endif
+
+#if defined(AXP_ENABLE_SM90)
+AXP_GRAPH_ENTRY(axp::l4::graph_registry::hashes::z_scientific_sparse_segmented_1024, axp::l4::preset::ScientificSparseSegmented1024, iro::cap::sm90, axp::l4::profile::proof_full);
+#endif
+
+#if defined(AXP_ENABLE_SM89)
+AXP_GRAPH_ENTRY(axp::l4::graph_registry::hashes::z_scientific_swizzle_16x16, axp::l4::preset::ScientificSwizzle16x16, iro::cap::sm89, axp::l4::profile::proof_full);
+#endif
+
+#if defined(AXP_ENABLE_SM90)
+AXP_GRAPH_ENTRY(axp::l4::graph_registry::hashes::z_scientific_swizzle_16x16, axp::l4::preset::ScientificSwizzle16x16, iro::cap::sm90, axp::l4::profile::proof_full);
+#endif
+
+#if defined(AXP_ENABLE_SM89)
 AXP_GRAPH_HASH_OVERRIDE(axp::l4::graph_registry::hashes::attention_16x16, axp::l4::preset::Attention16x16, iro::cap::sm89);
 #endif
 
@@ -340,6 +389,30 @@ AXP_GRAPH_HASH_OVERRIDE(axp::l4::graph_registry::hashes::gemm_16x16x16, axp::l4:
 
 #if defined(AXP_ENABLE_SM90)
 AXP_GRAPH_HASH_OVERRIDE(axp::l4::graph_registry::hashes::fa2_decode_attention_64x64_hd128, axp::l4::preset::Attention64x64x128Decode, iro::cap::sm90);
+#endif
+
+#if defined(AXP_ENABLE_SM89)
+AXP_GRAPH_HASH_OVERRIDE(axp::l4::graph_registry::hashes::z_streaming_microbatch_1024, axp::l4::preset::StreamingMicrobatch1024, iro::cap::sm89);
+#endif
+
+#if defined(AXP_ENABLE_SM90)
+AXP_GRAPH_HASH_OVERRIDE(axp::l4::graph_registry::hashes::z_streaming_microbatch_1024, axp::l4::preset::StreamingMicrobatch1024, iro::cap::sm90);
+#endif
+
+#if defined(AXP_ENABLE_SM89)
+AXP_GRAPH_HASH_OVERRIDE(axp::l4::graph_registry::hashes::z_scientific_sparse_segmented_1024, axp::l4::preset::ScientificSparseSegmented1024, iro::cap::sm89);
+#endif
+
+#if defined(AXP_ENABLE_SM90)
+AXP_GRAPH_HASH_OVERRIDE(axp::l4::graph_registry::hashes::z_scientific_sparse_segmented_1024, axp::l4::preset::ScientificSparseSegmented1024, iro::cap::sm90);
+#endif
+
+#if defined(AXP_ENABLE_SM89)
+AXP_GRAPH_HASH_OVERRIDE(axp::l4::graph_registry::hashes::z_scientific_swizzle_16x16, axp::l4::preset::ScientificSwizzle16x16, iro::cap::sm89);
+#endif
+
+#if defined(AXP_ENABLE_SM90)
+AXP_GRAPH_HASH_OVERRIDE(axp::l4::graph_registry::hashes::z_scientific_swizzle_16x16, axp::l4::preset::ScientificSwizzle16x16, iro::cap::sm90);
 #endif
 
 #undef AXP_GRAPH_ENTRY

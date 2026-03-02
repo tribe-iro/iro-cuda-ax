@@ -3,7 +3,6 @@
  * @brief Compile-time verification for AX primitives and patterns.
  */
 
-#include <iro_rust_cuda_ffi.h>
 #include "iro_cuda_ax_core.hpp"
 #include <axp/primitives.hpp>
 #include <axp/protocol/audit/tokens.hpp>
@@ -17,7 +16,7 @@ static_assert(RecipeF16::id != RecipeF16Fast::id);
 static_assert(RecipeF16::id != RecipeF16Approx::id);
 
 using Issue = axp::protocol::stage::IssueGmemToSmemSlot<
-    RecipeF16, InTileG, OutTileS, ASubj, axp::tag::PipeA, SlotSubj,
+    RecipeF16, InTileG, OutTileS, ASubj, PipeATag, SlotSubj,
     iro::exec::block, iro::token::lifetime::block, 2>;
 using Wait = axp::protocol::stage::WaitSmemSlot<
     RecipeF16, OutTileS, SlotSubj, iro::exec::block, iro::token::lifetime::block>;
@@ -112,8 +111,8 @@ static_assert(axp::protocol::audit::contract_tokens_complete<MaskApply>());
 
 struct CausalMaskTag { static constexpr auto id = iro::util::fnv1a_64_cstr("axp.test.causal_mask"); };
 struct CausalPredTag { static constexpr auto id = iro::util::fnv1a_64_cstr("axp.test.causal_pred"); };
-using CausalMaskSubj = axp::subject::indexed<CausalMaskTag, 0>;
-using CausalPredSubj = axp::subject::indexed<CausalPredTag, 0>;
+using CausalMaskSubj = axp::subject::wire<CausalMaskTag, 0>;
+using CausalPredSubj = axp::subject::wire<CausalPredTag, 0>;
 using CausalMaskPayload = iro::contract::MaskDesc<32, iro::dist::replicated>;
 using CausalPredPayload = iro::contract::ScalarDesc<iro::elem::u8, iro::dist::replicated>;
 using CoordPayload = iro::contract::ScalarDesc<iro::elem::i32, iro::dist::uniform<iro::scope::block>>;
@@ -239,17 +238,40 @@ static_assert(axp::protocol::audit::contract_tokens_complete<BulkCopy2D>());
 static_assert(axp::protocol::audit::contract_tokens_complete<BulkStore2D>());
 
 using CpAsyncIssue = axp::protocol::stage::CpAsyncIssue<
-    RecipeF16, InTileG, SmemTileF16, ASubj, axp::tag::PipeA, SlotSubj, iro::exec::block,
+    RecipeF16, InTileG, SmemTileF16, ASubj, PipeATag, SlotSubj, iro::exec::block,
     iro::token::lifetime::block, 2>;
 using CpAsyncCommit = axp::protocol::stage::CpAsyncCommit<
-    RecipeF16, SmemTileF16, axp::tag::PipeA, SlotSubj, iro::exec::block,
+    RecipeF16, SmemTileF16, PipeATag, SlotSubj, iro::exec::block,
     iro::token::lifetime::block, 2>;
 using CpAsyncWait = axp::protocol::stage::CpAsyncWait<
-    RecipeF16, SmemTileF16, axp::tag::PipeA, SlotSubj, iro::exec::block,
+    RecipeF16, SmemTileF16, PipeATag, SlotSubj, iro::exec::block,
     iro::token::lifetime::block, 2, 0>;
 static_assert(axp::protocol::audit::contract_tokens_complete<CpAsyncIssue>());
 static_assert(axp::protocol::audit::contract_tokens_complete<CpAsyncCommit>());
 static_assert(axp::protocol::audit::contract_tokens_complete<CpAsyncWait>());
+
+struct OrderEventTag { static constexpr auto id = iro::util::fnv1a_64_cstr("axp.test.order.event"); };
+struct OrderPhaseTag { static constexpr auto id = iro::util::fnv1a_64_cstr("axp.test.order.phase"); };
+using PublishEvent = axp::level0::PublishEvent<
+    RecipeF32, ASubj, OrderEventTag, iro::exec::warp, iro::token::lifetime::warp>;
+using DependEvent = axp::level0::DependOnEvent<
+    RecipeF32, ASubj, OrderEventTag, OrderPhaseTag, iro::exec::warp, iro::token::lifetime::warp>;
+using DependGate = axp::level0::DependOnEventGate<
+    RecipeF32, ScalarF32, SSubjA, ASubj, OrderEventTag, OrderPhaseTag, iro::exec::warp, iro::token::lifetime::warp>;
+using EmitAfter = axp::level0::EmitEventAfter<
+    RecipeF32, ScalarF32, SSubjA, ASubj, OrderEventTag, iro::exec::warp, iro::token::lifetime::warp>;
+static_assert(iro::util::size_v<typename PublishEvent::inputs> == 0);
+static_assert(iro::util::size_v<typename PublishEvent::outputs> == 1);
+static_assert(iro::util::size_v<typename DependEvent::inputs> == 1);
+static_assert(iro::util::size_v<typename DependEvent::outputs> == 1);
+static_assert(iro::util::size_v<typename DependGate::inputs> == 2);
+static_assert(iro::util::size_v<typename DependGate::outputs> == 1);
+static_assert(iro::util::size_v<typename EmitAfter::inputs> == 1);
+static_assert(iro::util::size_v<typename EmitAfter::outputs> == 2);
+static_assert(axp::protocol::audit::contract_tokens_complete<PublishEvent>());
+static_assert(axp::protocol::audit::contract_tokens_complete<DependEvent>());
+static_assert(axp::protocol::audit::contract_tokens_complete<DependGate>());
+static_assert(axp::protocol::audit::contract_tokens_complete<EmitAfter>());
 
 // -----------------------------------------------------------------------------
 // L0 atom instantiations (compile-time contract validation)
@@ -478,7 +500,7 @@ using L0SwzSt = axp::level0::SwizzledStShared<
     axp::protocol::stage::SwizzleAtom_128B, axp::dist::reg_tile, iro::contract::no_dist>;
 static_assert(iro::util::size_v<typename L0SwzSt::outputs> == 1);
 
-using WSubj = axp::subject::indexed<axp::tag::Acc, 7>;
+using WSubj = axp::subject::wire<axp::tag::Acc, 7>;
 using L0WgmmaFence = axp::level0::WgmmaFence<
     RecipeF16, WSubj, iro::exec::warpgroup>;
 using L0WgmmaCommit = axp::level0::WgmmaCommitGroup<
@@ -536,8 +558,8 @@ using AccFragWg = iro::contract::FragmentDesc<
     iro::dist::accumulator,
     8
 >;
-using DescASubj = axp::subject::indexed<axp::tag::A, 9>;
-using DescBSubj = axp::subject::indexed<axp::tag::B, 9>;
+using DescASubj = axp::subject::wire<axp::tag::A, 9>;
+using DescBSubj = axp::subject::wire<axp::tag::B, 9>;
 using ADesc = axp::protocol::ownership::WgmmaSmemDesc<
     ATileWg, ASubj, axp::protocol::stage::SwizzleAtom_128B>;
 using BDesc = axp::protocol::ownership::WgmmaSmemDesc<
@@ -626,14 +648,14 @@ using SmemTileReduce = iro::contract::Tile<
     iro::contract::space::shared,
     iro::contract::Align<16>
 >;
-using SmemSubj = axp::subject::indexed<axp::tag::S, 0>;
+using SmemSubj = axp::subject::wire<axp::tag::S, 0>;
 
 using L1BlockReduce = axp::level1::BlockReduce<
     RecipeF32, FragF32, SmemTileReduce, FSubjA, SmemSubj, iro::exec::warp, axp::level0::Add>;
 static_assert(iro::util::size_v<typename L1BlockReduce::obligations> > 0);
 
 using L1VecLoad = axp::level1::VecLoad<
-    RecipeF16, InTileG, OutTileS, ASubj, axp::tag::PipeA, SlotSubj,
+    RecipeF16, InTileG, OutTileS, ASubj, PipeATag, SlotSubj,
     iro::exec::block, iro::token::lifetime::block, 2>;
 static_assert(iro::util::size_v<typename L1VecLoad::obligations> == 2);
 
@@ -704,8 +726,9 @@ static_assert(iro::bind::match_realization<EmptyObligation, iro::cap::sm90, Test
 static_assert(!iro::bind::match_realization<EmptyObligation, iro::cap::sm90, TestRegistry>::ambiguous);
 static_assert(iro::bind::match_realization<EmptyObligation, iro::cap::sm90, TestRegistry>::match_count == 1);
 
-// L4 graph-hash dispatch must resolve deterministically without preset-only fallback.
-using SortGraph = axp::level3::registry::Select<axp::l4::preset::Sort16, iro::cap::sm89>;
+// L4 graph-hash dispatch must resolve deterministically through explicit L4->L3 lowering.
+using SortPattern = axp::l4::lowering::to_l3_pattern_t<axp::l4::preset::Sort16>;
+using SortGraph = axp::level3::registry::Select<SortPattern, iro::cap::sm89>;
 using L4SortResolve = axp::l4::resolve<SortGraph, iro::cap::sm89, axp::l4::profile::proof_full>;
 static_assert(axp::l4::graph_registry::enabled_v<
               axp::graph::graph_hash_v<SortGraph>, iro::cap::sm89, axp::l4::profile::proof_full>);

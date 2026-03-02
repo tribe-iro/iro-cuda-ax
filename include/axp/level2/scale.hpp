@@ -1,9 +1,9 @@
 #pragma once
 
 #include <iro_cuda_ax_core.hpp>
+#include "../level1/passthrough.hpp"
 #include "detail/compose.hpp"
 #include "registry.hpp"
-#include "../level0/scale.hpp"
 #include "../bundles/token_bundles.hpp"
 
 namespace axp::level2::scale {
@@ -23,7 +23,7 @@ struct resolve_impl<ScaleSharedTilePattern<Recipe, Tile, ScaleTile, TileSubj, Sc
     static constexpr bool supported = true;
     using TileReady = axp::bundle::SmemReadyTx<TileSubj, ExecGroup, iro::token::lifetime::block, Tile::bytes>;
     using type = axp::level2::detail::as_composition_t<
-        axp::level0::ScaleSharedTile<
+        axp::level1::low::ScaleSharedTile<
             Recipe,
             Tile,
             ScaleTile,

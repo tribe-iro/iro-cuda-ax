@@ -1,9 +1,8 @@
 #pragma once
 
 #include <iro_cuda_ax_core.hpp>
-#include "../level0/ownership.hpp"
-#include "../level0/memory.hpp"
-#include "../level2/norm.hpp"
+#include "../level2/passthrough.hpp"
+#include "domain/norm.hpp"
 #include "detail/compose.hpp"
 #include "detail/reg_pressure.hpp"
 #include "registry.hpp"
@@ -80,18 +79,18 @@ struct LayerNormTileImpl {
         iro::contract::Align<16>
     >;
 
-    using TileIn = axp::level0::TileBoundaryIn<
+    using TileIn = axp::level2::low::TileBoundaryIn<
         Recipe, InTile, InSubj, ExecGroup, iro::token::lifetime::block
     >;
-    using TileOut = axp::level0::TileBoundaryOut<
+    using TileOut = axp::level2::low::TileBoundaryOut<
         Recipe, OutTile, OutSubj, iro::exec::block, iro::token::lifetime::block
     >;
 
-    using Load = axp::level0::SharedTileToFragment<
+    using Load = axp::level2::low::SharedTileToFragment<
         Recipe, InTile, Frag, InSubj, detail::norm_in_frag_subj, ExecGroup, iro::token::lifetime::block
     >;
 
-    using Norm = axp::level2::registry::Select<axp::level2::registry::LayerNormFragPattern<
+    using Norm = axp::level3::domain::registry::Select<axp::level3::domain::registry::LayerNormFragPattern<
         Recipe, Frag, GammaFrag, BetaFrag, EpsPayload,
         detail::norm_in_frag_subj, GammaSubj, BetaSubj, EpsSubj,
         detail::norm_out_frag_subj, ExecGroup>, CapT>;
@@ -104,7 +103,7 @@ struct LayerNormTileImpl {
         typename Recipe::math
     >;
 
-    using Store = axp::level0::FragmentToSharedTile<
+    using Store = axp::level2::low::FragmentToSharedTile<
         StoreRecipe,
         Frag,
         OutTile,
@@ -114,7 +113,7 @@ struct LayerNormTileImpl {
         iro::token::lifetime::warp
     >;
 
-    using Fence = axp::level0::TileFence<
+    using Fence = axp::level2::low::TileFence<
         Recipe,
         OutTile,
         OutSubj,
@@ -185,18 +184,18 @@ struct RMSNormTileImpl {
         iro::contract::Align<16>
     >;
 
-    using TileIn = axp::level0::TileBoundaryIn<
+    using TileIn = axp::level2::low::TileBoundaryIn<
         Recipe, InTile, InSubj, ExecGroup, iro::token::lifetime::block
     >;
-    using TileOut = axp::level0::TileBoundaryOut<
+    using TileOut = axp::level2::low::TileBoundaryOut<
         Recipe, OutTile, OutSubj, iro::exec::block, iro::token::lifetime::block
     >;
 
-    using Load = axp::level0::SharedTileToFragment<
+    using Load = axp::level2::low::SharedTileToFragment<
         Recipe, InTile, Frag, InSubj, detail::norm_in_frag_subj, ExecGroup, iro::token::lifetime::block
     >;
 
-    using Norm = axp::level2::registry::Select<axp::level2::registry::RMSNormFragPattern<
+    using Norm = axp::level3::domain::registry::Select<axp::level3::domain::registry::RMSNormFragPattern<
         Recipe, Frag, WeightFrag, EpsPayload,
         detail::norm_in_frag_subj, WeightSubj, EpsSubj,
         detail::norm_out_frag_subj, ExecGroup>, CapT>;
@@ -209,7 +208,7 @@ struct RMSNormTileImpl {
         typename Recipe::math
     >;
 
-    using Store = axp::level0::FragmentToSharedTile<
+    using Store = axp::level2::low::FragmentToSharedTile<
         StoreRecipe,
         Frag,
         OutTile,
@@ -219,7 +218,7 @@ struct RMSNormTileImpl {
         iro::token::lifetime::warp
     >;
 
-    using Fence = axp::level0::TileFence<
+    using Fence = axp::level2::low::TileFence<
         Recipe,
         OutTile,
         OutSubj,

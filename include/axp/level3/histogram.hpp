@@ -1,8 +1,7 @@
 #pragma once
 
 #include <iro_cuda_ax_core.hpp>
-#include "../level0/memory.hpp"
-#include "../level0/ownership.hpp"
+#include "../level2/passthrough.hpp"
 #include "detail/compose.hpp"
 #include "detail/reg_pressure.hpp"
 #include "registry.hpp"
@@ -15,6 +14,8 @@ using in_port_t = axp::level3::detail::in_port_t<Obligation, I>;
 template<class Obligation, int I>
 using out_port_t = axp::level3::detail::out_port_t<Obligation, I>;
 using axp::level3::detail::reg_pressure_const;
+
+struct flush_event_tag { static constexpr auto id = iro::util::fnv1a_64_cstr("axp.level3.histogram.flush_event"); };
 } // namespace detail
 
 // Histogram tile (shared privatization + global atomic reduce).
@@ -31,33 +32,44 @@ struct HistogramTileImpl {
     static_assert(std::is_same_v<ExecGroup, iro::exec::block>,
                   "HistogramTile: ExecGroup must be block");
 
-    using Zero = axp::level0::TileZero<
+    using Zero = axp::level2::low::TileZero<
         Recipe, SharedTile, SharedSubj, ExecGroup
     >;
 
-    using LocalAtomic = axp::level0::AtomicAdd<
+    using LocalAtomic = axp::level2::low::AtomicAdd<
         Recipe, ValuePayload, IndexPayload, ValuePayload, SharedTile,
         ValueSubj, IndexSubj, OutValSubj, SharedSubj, ExecGroup
     >;
 
-    using Flush = axp::level0::ReduceSharedToGlobalAtomicAdd<
+    using Flush = axp::level2::low::ReduceSharedToGlobalAtomicAdd<
         Recipe, SharedTile, OutTile, SharedSubj, OutSubj, ExecGroup
     >;
 
-    using TileOutIn = axp::level0::TileBoundaryIn<
+    using AtomicDone = axp::level2::low::MarkAtomicDoneFromTile<
+        Recipe, OutTile, OutSubj, ExecGroup, iro::scope::device, iro::memory_order::release, iro::token::lifetime::block
+    >;
+
+    using FlushEvent = axp::level2::low::EventFromAtomicDone<
+        Recipe, OutSubj, iro::scope::device, detail::flush_event_tag, ExecGroup,
+        iro::memory_order::release, iro::token::lifetime::block
+    >;
+
+    using TileOutIn = axp::level2::low::TileBoundaryIn<
         Recipe, OutTile, OutSubj, ExecGroup, iro::token::lifetime::block
     >;
     using RegPressure = detail::reg_pressure_const<12>;
 
-    using TileOut = axp::level0::TileBoundaryOut<
+    using TileOut = axp::level2::low::TileBoundaryOut<
         Recipe, OutTile, OutSubj, iro::exec::block, iro::token::lifetime::block
     >;
 
-    using obligations = iro::util::type_list<RegPressure, TileOutIn, Zero, LocalAtomic, Flush, TileOut>;
+    using obligations = iro::util::type_list<RegPressure, TileOutIn, Zero, LocalAtomic, Flush, AtomicDone, FlushEvent, TileOut>;
     using edges = iro::util::type_list<
         iro::compose::Edge<detail::out_port_t<Zero, 0>, detail::in_port_t<LocalAtomic, 0>>,
         iro::compose::Edge<detail::out_port_t<LocalAtomic, 1>, detail::in_port_t<Flush, 0>>,
         iro::compose::Edge<detail::out_port_t<TileOutIn, 0>, detail::in_port_t<Flush, 1>>,
+        iro::compose::Edge<detail::out_port_t<Flush, 0>, detail::in_port_t<AtomicDone, 0>>,
+        iro::compose::Edge<detail::out_port_t<AtomicDone, 0>, detail::in_port_t<FlushEvent, 0>>,
         iro::compose::Edge<detail::out_port_t<Flush, 0>, detail::in_port_t<TileOut, 0>>
     >;
     using type = axp::level3::detail::make_composition_t<obligations, edges, iro::profile::BudgetMax, CapT>;

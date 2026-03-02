@@ -4,6 +4,8 @@
 #include <type_traits>
 #include "../protocol/sync/bundles.hpp"
 #include "../protocol/stage/tokens.hpp"
+#include "../protocol/order/bundles.hpp"
+#include "../protocol/atomic/bundles.hpp"
 #include "../detail/participation_tokens.hpp"
 
 namespace axp::bundle {
@@ -175,5 +177,17 @@ using BarrierReady = axp::protocol::sync::BarrierReady<Subject, ExecGroup, Lifet
 
 template<class Subject, class ExecGroup, class Lifetime = iro::token::lifetime::block>
 using BarrierArrived = axp::protocol::sync::BarrierArrived<Subject, ExecGroup, Lifetime>;
+
+template<class Subject, class EventTag, class ExecGroup, class Lifetime = iro::token::lifetime::block>
+using EventPublished = axp::protocol::order::EventPublished<Subject, EventTag, ExecGroup, Lifetime>;
+
+template<class Subject, class EventTag, class PhaseTag, class ExecGroup, class Lifetime = iro::token::lifetime::block>
+using EventPhaseReady = axp::protocol::order::EventPhaseReady<Subject, EventTag, PhaseTag, ExecGroup, Lifetime>;
+
+template<class Subject, class EpochTag, class ExecGroup, class Lifetime = iro::token::lifetime::block>
+using EpochStamped = axp::protocol::order::EpochStamped<Subject, EpochTag, ExecGroup, Lifetime>;
+
+template<class Subject, class ScopeT, class OrderT = iro::memory_order::seq_cst, class Lifetime = iro::token::lifetime::block>
+using AtomicDone = axp::protocol::atomic::AtomicDone<Subject, ScopeT, OrderT, Lifetime>;
 
 } // namespace axp::bundle

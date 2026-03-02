@@ -53,6 +53,63 @@ template<class Recipe, class Payload, class CarryPayload, class Subj, class Carr
          class InExtra = iro::util::type_list<>, class OutExtra = iro::util::type_list<>>
 struct ChainedScanPattern {};
 
+// Order patterns
+template<class Recipe, class Subject, class EventTag, class ExecGroup,
+         class Lifetime = iro::token::lifetime::block>
+struct PublishEventPattern {};
+
+template<class Recipe, class Payload, class PayloadSubj, class Subject, class EventTag, class ExecGroup,
+         class Lifetime = iro::token::lifetime::block,
+         class InExtra = iro::util::type_list<>, class OutExtra = iro::util::type_list<>>
+struct EmitEventAfterPattern {};
+
+template<class Recipe, class Subject, class EventTag, class PhaseTag, class ExecGroup,
+         class Lifetime = iro::token::lifetime::block>
+struct DependOnEventPattern {};
+
+template<class Recipe, class Payload, class PayloadSubj, class Subject, class EventTag, class PhaseTag, class ExecGroup,
+         class Lifetime = iro::token::lifetime::block,
+         class InExtra = iro::util::type_list<>, class OutExtra = iro::util::type_list<>>
+struct DependOnEventGatePattern {};
+
+template<class Recipe, class Subject, class PrevEpochTag, class NextEpochTag, class ExecGroup,
+         class Lifetime = iro::token::lifetime::block>
+struct AdvanceEpochPattern {};
+
+template<class Recipe, class Subject, class ScopeT, class EventTag, class ExecGroup,
+         class OrderT = iro::memory_order::seq_cst,
+         class Lifetime = iro::token::lifetime::block>
+struct EventFromAtomicDonePattern {};
+
+// Epoch patterns
+template<class Recipe, class Subject, class EpochTag, class ExecGroup,
+         class Lifetime = iro::token::lifetime::block>
+struct InitEpochPattern {};
+
+template<class Recipe, class Subject, class PrevEpochTag, class NextEpochTag, class ExecGroup,
+         class Lifetime = iro::token::lifetime::block>
+struct AdvanceEpochTokenPattern {};
+
+template<class Recipe, class Subject, class EpochTag, class ExecGroup,
+         class Lifetime = iro::token::lifetime::block>
+struct RequireEpochPattern {};
+
+// Atomic patterns
+template<class Recipe, class Subject, class ExecGroup, class ScopeT,
+         class OrderT = iro::memory_order::seq_cst,
+         class Lifetime = iro::token::lifetime::block>
+struct MarkAtomicDonePattern {};
+
+template<class Recipe, class Subject, class ExecGroup, class ScopeT,
+         class OrderT = iro::memory_order::seq_cst,
+         class Lifetime = iro::token::lifetime::block>
+struct RequireAtomicDonePattern {};
+
+template<class Recipe, class TilePayload, class Subject, class ExecGroup, class ScopeT,
+         class OrderT = iro::memory_order::seq_cst,
+         class Lifetime = iro::token::lifetime::block>
+struct MarkAtomicDoneFromTilePattern {};
+
 // Row reduction patterns
 template<class Recipe, class Frag, class InSubj, class OutSubj, class ExecGroup>
 struct RowSumPattern {};
