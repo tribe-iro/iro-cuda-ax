@@ -1,5 +1,18 @@
+# Build/install outputs
 /build/
 /out/
+
+# Local planning/scratch docs
+/plan.md
+
+# Generated tools (local binaries)
 /tools/generated/ax_manifest_tool
-/tools/__pycache__/
+/tools/generated/gen_layer_adapters
+
+# Generated instantiation wrappers
 /tests/kernels/generated/*/*.cu
+
+# Editor/OS noise
+.DS_Store
+*.swp
+*.swo

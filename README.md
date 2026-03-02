@@ -6,21 +6,20 @@ Pure C++20 AX contract library for CUDA kernel composition.
 
 This repository contains only C++ AX artifacts:
 
-1. `include/iro_cuda_ax_core.hpp`
-2. `include/axp/**`
-3. compile-time verification tests in `tests/compile/**`
-4. AX tooling in `tools/**`
+1. Core contract substrate: `include/iro_cuda_ax_core.hpp`
+2. AX layers/protocols/realizations: `include/axp/**`
+3. Compile-time contract checks: `tests/compile/**`
+4. Manifest/codegen tooling (C++ only): `tools/**`
 
 No Rust crates or Cargo packaging exist in this repository.
 
-Tooling policy: scripts in `tools/**` may validate manifests and generate C++ instantiation wrappers, but must not generate CUDA kernel definitions. Kernel semantics stay in handwritten C++ templates under `include/axp/**` (and compile instantiation units under `tests/kernels/**`).
-Manifest/registry generation and instantiation codegen are implemented in C++ (`tools/ax_manifest_tool.cpp`) and invoked by `scripts/check.sh` / `scripts/compile.sh`.
-Pre-GA policy: no backward-compatibility shims or legacy aliases are maintained.
-Layering policy is strict adjacency only: `L4 -> L3 -> L2 -> L1 -> L0` (no skip-layer dependencies).
-Pass-through interfaces are canonical for consistency and may be generated for 1:1 mappings.
+## Architectural Policy
 
-Canonical public presets are `axp::l4::preset::*`.
-Manifest schema does not include an `entry` field.
+1. Pre-GA: breaking changes are allowed.
+2. No backward-compatibility shims or legacy aliases.
+3. Strict layer adjacency: `L4 -> L3 -> L2 -> L1 -> L0`.
+4. Canonical public presets: `axp::l4::preset::*`.
+5. Tooling may generate instantiation wrappers, not CUDA kernel definitions.
 
 ## Build
 
@@ -30,19 +29,38 @@ cmake --build build
 cmake --install build --prefix ./out
 ```
 
-## Consumption
+Consume as a header-only package via CMake target `iro-cuda-ax::headers`, or by adding `include/` to include paths.
 
-Consume as header-only C++ package via CMake target `iro-cuda-ax::headers`
-or by adding `include/` to your compiler include paths.
+## Validation And Generation
 
-## Manifest And Registry Checks
+Run manifest + registry validation:
 
 ```bash
 scripts/check.sh
 ```
 
+Generate manifest-driven instantiation wrappers:
+
+```bash
+AX_COMPILE_MODE=dev_fast scripts/compile.sh
+# or
+AX_COMPILE_MODE=proof_full scripts/compile.sh
+```
+
+Generated wrappers are written under `tests/kernels/generated/*/*.cu`.
+
+## Example (SM89)
+
+Runnable L4-driven sample:
+
+```bash
+scripts/run_sm89_ax_div_example.sh
+```
+
+It resolves from an L4 preset, lowers to an L3 graph, and executes selected obligations.
+
 ## Architecture Docs
 
-- `docs/architecture/layer_contract_law.md`
-- `docs/architecture/protocol_planes.md`
-- `docs/architecture/reference_kernels.md`
+1. `docs/architecture/layer_contract_law.md`
+2. `docs/architecture/protocol_planes.md`
+3. `docs/architecture/reference_kernels.md`
